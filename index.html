@@ -1,0 +1,2379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Transactional Outbox Pattern & Courier Integration | System Design</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons & html2canvas -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --bg-dark: #07090e;
+      --bg-canvas: #0d121f;
+      --bg-card: #131b2e;
+      --bg-card-hover: #18233c;
+      --border-card: #202d4a;
+      --border-glow: rgba(59, 130, 246, 0.4);
+      
+      --c-text-primary: #f8fafc;
+      --c-text-secondary: #94a3b8;
+      --c-text-muted: #64748b;
+      
+      --c-cyan: #06b6d4;
+      --c-red: #ea284e;
+      --c-blue: #3b82f6;
+      --c-purple: #a855f7;
+      --c-amber: #f59e0b;
+      --c-emerald: #10b981;
+      --c-kafka: #f97316;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--c-text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      overflow-x: hidden;
+    }
+
+    /* TOP TOOLBAR */
+    .toolbar {
+      width: 100%;
+      max-width: 1280px;
+      background: rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(16px);
+      border: 1px solid #1e293b;
+      border-radius: 14px;
+      padding: 12px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      position: sticky;
+      top: 12px;
+      z-index: 100;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #fff;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #f97316, #ea284e);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+
+    .toolbar-tabs {
+      display: flex;
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 3px;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--c-text-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      background: #2563eb;
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(37, 99, 235, 0.4);
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: #334155;
+      color: #fff;
+      border-color: #475569;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      color: #fff;
+      border: none;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #0369a1, #1d4ed8);
+      transform: translateY(-1px);
+    }
+
+    /* SCREENSHOT CONTAINER */
+    #capture-wrapper {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      transition: all 0.3s ease;
+    }
+
+    #capture-card {
+      width: 100%;
+      max-width: 1160px;
+      background-color: var(--bg-canvas);
+      background-image: 
+        radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+        radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 24px 24px, 12px 12px;
+      background-position: 0 0, 12px 12px;
+      border: 1px solid var(--border-card);
+      border-radius: 24px;
+      padding: 40px 48px;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 40px rgba(37, 99, 235, 0.08);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Ratio Presets */
+    .ratio-4-5 #capture-card {
+      max-width: 900px;
+    }
+    .ratio-16-9 #capture-card {
+      max-width: 1200px;
+    }
+
+    /* BOARD HEADER */
+    .board-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 32px;
+      border-bottom: 1px solid #1c273e;
+      padding-bottom: 24px;
+      gap: 20px;
+    }
+
+    .board-header-left h1 {
+      font-size: 25px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #38bdf8 0%, #818cf8 50%, #f43f5e 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .board-header-left p {
+      font-size: 13px;
+      color: var(--c-text-secondary);
+      margin-top: 6px;
+      font-weight: 500;
+    }
+
+    .tech-stack-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge-pill {
+      font-family: 'Fira Code', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border: 1px solid transparent;
+    }
+
+    .pill-kafka {
+      background: rgba(249, 115, 22, 0.12);
+      color: #fb923c;
+      border-color: rgba(249, 115, 22, 0.3);
+    }
+    .pill-outbox {
+      background: rgba(168, 85, 247, 0.12);
+      color: #d8b4fe;
+      border-color: rgba(168, 85, 247, 0.3);
+    }
+    .pill-postgres {
+      background: rgba(59, 130, 246, 0.12);
+      color: #93c5fd;
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+    .pill-courier {
+      background: rgba(6, 182, 212, 0.12);
+      color: #67e8f9;
+      border-color: rgba(6, 182, 212, 0.3);
+    }
+
+    /* ====================================================
+       TAB 1: TRANSACTIONAL OUTBOX & COURIER PATTERN (NEW!)
+       ==================================================== */
+    .outbox-view-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
+    /* COMMON SERVICE CONTAINER */
+    .service-block {
+      width: 100%;
+      max-width: 820px;
+      background: #111728;
+      border-radius: 18px;
+      padding: 22px 28px;
+      position: relative;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      transition: all 0.25s ease;
+    }
+
+    .service-block:hover {
+      transform: translateY(-2px);
+    }
+
+    .service-block.ecom {
+      border: 1.5px solid #3b82f6;
+      box-shadow: 0 0 25px rgba(59, 130, 246, 0.15);
+    }
+
+    .service-block.courier {
+      border: 1.5px solid #06b6d4;
+      box-shadow: 0 0 25px rgba(6, 182, 212, 0.15);
+    }
+
+    .service-block-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .service-block-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+    }
+
+    .service-block.ecom .service-block-title { color: #93c5fd; }
+    .service-block.courier .service-block-title { color: #67e8f9; }
+
+    .role-badge {
+      font-size: 10px;
+      font-family: 'Fira Code', monospace;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .role-producer {
+      background: rgba(59, 130, 246, 0.2);
+      color: #bfdbfe;
+      border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+
+    .role-consumer {
+      background: rgba(6, 182, 212, 0.2);
+      color: #a5f3fc;
+      border: 1px solid rgba(6, 182, 212, 0.4);
+    }
+
+    /* ENDPOINT ROW */
+    .endpoint-pill {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 8px 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Fira Code', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .method-post {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 9.5px;
+      font-weight: 800;
+    }
+
+    /* INNER CARDS */
+    .inner-subcard {
+      background: #090e1a;
+      border: 1px solid #1f2d48;
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin-top: 12px;
+      position: relative;
+    }
+
+    .inner-subcard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #f1f5f9;
+      letter-spacing: 0.5px;
+      font-family: 'Fira Code', monospace;
+    }
+
+    .inner-subcard-header i {
+      color: #a855f7;
+    }
+
+    .tx-rows-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .tx-item {
+      background: #121a2d;
+      border: 1px solid #233454;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-family: 'Fira Code', monospace;
+      font-weight: 600;
+      color: #e2e8f0;
+      transition: all 0.2s;
+    }
+
+    .tx-item:hover {
+      border-color: #38bdf8;
+      background: #18233c;
+    }
+
+    .tx-item i {
+      color: #38bdf8;
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+
+    .tx-item.outbox {
+      border-color: #a855f7;
+      background: rgba(168, 85, 247, 0.08);
+      color: #e9d5ff;
+    }
+    .tx-item.outbox i {
+      color: #c084fc;
+    }
+
+    /* CONNECTING PIPELINE ARROWS */
+    .pipeline-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 10px 0;
+      position: relative;
+    }
+
+    .pipeline-line {
+      width: 2px;
+      height: 32px;
+      background: linear-gradient(to bottom, #3b82f6, #a855f7);
+    }
+
+    .pipeline-head {
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 8px solid #a855f7;
+      margin-top: -2px;
+    }
+
+    /* OUTBOX POLLER CARD */
+    .poller-card {
+      width: 100%;
+      max-width: 480px;
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(15, 23, 42, 0.95));
+      border: 1.5px solid #a855f7;
+      border-radius: 14px;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      box-shadow: 0 0 25px rgba(168, 85, 247, 0.15);
+      z-index: 2;
+    }
+
+    .poller-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .poller-title {
+      font-size: 13px;
+      font-weight: 800;
+      font-family: 'Fira Code', monospace;
+      color: #e9d5ff;
+      letter-spacing: 0.5px;
+    }
+
+    .poller-sub {
+      font-size: 10px;
+      color: #94a3b8;
+    }
+
+    .poller-badge {
+      font-size: 9.5px;
+      font-family: 'Fira Code', monospace;
+      background: rgba(168, 85, 247, 0.25);
+      color: #d8b4fe;
+      border: 1px solid rgba(168, 85, 247, 0.5);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 700;
+    }
+
+    /* KAFKA BOX */
+    .kafka-container {
+      width: 100%;
+      max-width: 640px;
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.15), rgba(15, 23, 42, 0.95));
+      border: 2px double #f97316;
+      border-radius: 16px;
+      padding: 16px 24px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 0 30px rgba(249, 115, 22, 0.18);
+      z-index: 2;
+    }
+
+    .kafka-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #ffedd5;
+      font-family: 'Fira Code', monospace;
+      letter-spacing: 1px;
+    }
+
+    .kafka-topic-pill {
+      background: #090e1a;
+      border: 1px solid #ea580c;
+      border-radius: 8px;
+      padding: 8px 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      color: #fb923c;
+      font-weight: 700;
+      margin-top: 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    /* COURIER SUB-SECTIONS (STACK OF 4 COMPONENTS) */
+    .courier-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .c-layer {
+      background: #090e1a;
+      border: 1px solid #1e2c45;
+      border-radius: 10px;
+      padding: 12px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .c-layer-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      font-family: 'Fira Code', monospace;
+      font-weight: 700;
+      color: #38bdf8;
+    }
+
+    .c-layer-desc {
+      font-size: 10.5px;
+      color: #94a3b8;
+    }
+
+    /* ADAPTERS GRID */
+    .adapters-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .adapter-card {
+      background: #12192b;
+      border: 1px solid #233452;
+      border-radius: 6px;
+      padding: 8px 10px;
+      text-align: center;
+      font-family: 'Fira Code', monospace;
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .adapter-card:hover {
+      border-color: #06b6d4;
+      background: #18243c;
+    }
+
+    .adapter-card i {
+      color: #06b6d4;
+      width: 14px;
+      height: 14px;
+    }
+
+    /* STATE MACHINE HORIZONTAL PIPELINE */
+    .state-machine-track {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .state-step {
+      background: #111a2e;
+      border: 1px solid #1e2d4a;
+      border-radius: 6px;
+      padding: 8px 6px;
+      text-align: center;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+    }
+
+    .state-step.active {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .state-name {
+      font-family: 'Fira Code', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .state-step.active .state-name {
+      color: #34d399;
+    }
+
+    .state-sub {
+      font-size: 8.5px;
+      color: #64748b;
+    }
+
+    /* OUTBOX HIGHLIGHTS GRID */
+    .outbox-takeaways-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      width: 100%;
+      max-width: 820px;
+      margin-top: 24px;
+    }
+
+    .takeaway-card {
+      background: #101626;
+      border: 1px solid #1e2a44;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .takeaway-card:hover {
+      border-color: #38bdf8;
+      background: #141c30;
+    }
+
+    .takeaway-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .takeaway-card p {
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    /* ====================================================
+       TAB 2: ORDER TO SHIPMENT (LOGISTICS BOUNDED CONTEXT)
+       ==================================================== */
+    .logistics-view-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+
+    .domains-top-banner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      max-width: 960px;
+      margin-bottom: 24px;
+      padding: 0 10px;
+    }
+
+    .domain-badge-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      font-family: 'Fira Code', monospace;
+    }
+
+    .domain-ecom {
+      background: rgba(245, 158, 11, 0.12);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);
+    }
+
+    .domain-logistics {
+      background: rgba(6, 182, 212, 0.12);
+      color: #22d3ee;
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.15);
+    }
+
+    .domain-connector-sub {
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .entities-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      width: 100%;
+      max-width: 960px;
+      position: relative;
+    }
+
+    .entity-box {
+      background: #111728;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      transition: all 0.25s ease;
+      position: relative;
+    }
+
+    .entity-box.order {
+      border: 1.5px solid #d97706;
+      box-shadow: 0 0 25px rgba(217, 119, 6, 0.12);
+    }
+
+    .entity-box.shipment {
+      border: 1.5px solid #0284c7;
+      box-shadow: 0 0 25px rgba(2, 132, 199, 0.12);
+    }
+
+    .entity-header {
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .entity-box.order .entity-header {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(180, 83, 9, 0.08));
+    }
+
+    .entity-box.shipment .entity-header {
+      background: linear-gradient(135deg, rgba(6, 182, 212, 0.2), rgba(2, 132, 199, 0.08));
+    }
+
+    .entity-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .entity-title-group h2 {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+    }
+
+    .entity-box.order .entity-title-group h2 { color: #fef3c7; }
+    .entity-box.shipment .entity-title-group h2 { color: #cffafe; }
+
+    .entity-meta-tag {
+      font-size: 10px;
+      font-family: 'Fira Code', monospace;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(0, 0, 0, 0.4);
+      color: #cbd5e1;
+    }
+
+    .fields-list {
+      padding: 12px 0;
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+    }
+
+    .field-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      transition: background 0.15s;
+    }
+
+    .field-row:last-child {
+      border-bottom: none;
+    }
+
+    .field-row:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .field-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #f1f5f9;
+      font-weight: 600;
+    }
+
+    .key-badge {
+      font-size: 9px;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+
+    .key-pk {
+      background: rgba(245, 158, 11, 0.25);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .key-awb {
+      background: rgba(6, 182, 212, 0.25);
+      color: #22d3ee;
+      border: 1px solid rgba(6, 182, 212, 0.4);
+    }
+
+    .field-right {
+      font-size: 11px;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-active-pill {
+      font-size: 9.5px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-weight: 700;
+    }
+
+    .creates-bridge-wrap {
+      width: 100%;
+      max-width: 960px;
+      position: relative;
+      margin-top: 10px;
+      margin-bottom: 28px;
+    }
+
+    .creates-svg {
+      width: 100%;
+      height: 80px;
+      display: block;
+    }
+
+    .creates-pill-badge {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #111827;
+      border: 1.5px solid #a855f7;
+      border-radius: 24px;
+      padding: 6px 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+      z-index: 5;
+    }
+
+    .creates-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #a855f7;
+      box-shadow: 0 0 8px #c084fc;
+      animation: pulse 1.8s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.4; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.2); }
+      100% { opacity: 0.4; transform: scale(0.9); }
+    }
+
+    .creates-text {
+      font-family: 'Fira Code', monospace;
+      font-weight: 800;
+      font-size: 12px;
+      color: #f1f5f9;
+      letter-spacing: 0.5px;
+    }
+
+    .creates-subtext {
+      font-size: 10px;
+      color: #cbd5e1;
+      border-left: 1px solid #374151;
+      padding-left: 8px;
+    }
+
+    .logistics-details-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      width: 100%;
+      max-width: 960px;
+    }
+
+    .detail-card {
+      background: #101626;
+      border: 1px solid #1e2a44;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .detail-card:hover {
+      border-color: #38bdf8;
+      background: #141c30;
+    }
+
+    .detail-card-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .detail-card p {
+      font-size: 11px;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    /* ====================================================
+       TAB 3: NESTJS ARCHITECTURE FLOW TREE
+       ==================================================== */
+    .flow-tree {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      position: relative;
+    }
+
+    .node-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 14px;
+      padding: 14px 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      z-index: 2;
+    }
+
+    .node-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .node-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .node-title {
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .node-subtitle {
+      font-size: 11px;
+      font-family: 'Fira Code', monospace;
+      color: var(--c-text-secondary);
+      margin-top: 4px;
+    }
+
+    .node-tags {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .tag-sm {
+      font-size: 9px;
+      font-family: 'Fira Code', monospace;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      color: #cbd5e1;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .connector-v {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 32px;
+      position: relative;
+    }
+
+    .connector-line {
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(to bottom, #3b82f6, #60a5fa);
+    }
+
+    .arrow-head {
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 6px solid #60a5fa;
+      margin-top: -2px;
+    }
+
+    .node-customer {
+      border-color: rgba(59, 130, 246, 0.4);
+      background: linear-gradient(135deg, rgba(30, 58, 138, 0.25), rgba(15, 23, 42, 0.8));
+      width: 260px;
+    }
+    .node-customer .node-title { color: #60a5fa; }
+
+    .node-web {
+      border-color: rgba(6, 182, 212, 0.4);
+      background: linear-gradient(135deg, rgba(8, 145, 178, 0.15), rgba(15, 23, 42, 0.9));
+      width: 320px;
+    }
+    .node-web .node-title { color: #22d3ee; }
+
+    .node-nestjs {
+      border-color: rgba(234, 40, 78, 0.5);
+      background: linear-gradient(135deg, rgba(234, 40, 78, 0.15), rgba(15, 23, 42, 0.95));
+      width: 360px;
+      box-shadow: 0 0 25px rgba(234, 40, 78, 0.15);
+    }
+    .node-nestjs .node-title { color: #ff476e; }
+
+    .branch-3-container {
+      width: 100%;
+      max-width: 900px;
+      position: relative;
+      margin: 8px 0;
+    }
+
+    .branch-svg-top {
+      width: 100%;
+      height: 36px;
+      display: block;
+    }
+
+    .branch-3-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .node-module {
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .node-auth {
+      border-color: rgba(168, 85, 247, 0.4);
+      background: rgba(168, 85, 247, 0.07);
+    }
+    .node-auth .node-title { color: #c084fc; }
+
+    .node-products {
+      border-color: rgba(59, 130, 246, 0.4);
+      background: rgba(59, 130, 246, 0.07);
+    }
+    .node-products .node-title { color: #60a5fa; }
+
+    .node-cart {
+      border-color: rgba(16, 185, 129, 0.4);
+      background: rgba(16, 185, 129, 0.07);
+    }
+    .node-cart .node-title { color: #34d399; }
+
+    .branch-svg-bottom {
+      width: 100%;
+      height: 36px;
+      display: block;
+    }
+
+    .node-order {
+      border-color: rgba(245, 158, 11, 0.5);
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(15, 23, 42, 0.95));
+      width: 340px;
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.12);
+    }
+    .node-order .node-title { color: #fbbf24; }
+
+    .branch-2-container {
+      width: 100%;
+      max-width: 720px;
+      position: relative;
+      margin: 8px 0;
+    }
+
+    .branch-svg-2-top {
+      width: 100%;
+      height: 34px;
+      display: block;
+    }
+
+    .branch-2-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+    }
+
+    .node-payment {
+      border-color: rgba(168, 85, 247, 0.45);
+      background: rgba(168, 85, 247, 0.08);
+    }
+    .node-payment .node-title { color: #d8b4fe; }
+
+    .node-shipping {
+      border-color: rgba(6, 182, 212, 0.45);
+      background: rgba(6, 182, 212, 0.08);
+    }
+    .node-shipping .node-title { color: #67e8f9; }
+
+    .sub-gateway-box {
+      margin-top: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px dashed rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 11px;
+      font-family: 'Fira Code', monospace;
+      font-weight: 600;
+      color: #f1f5f9;
+      width: 100%;
+    }
+
+    .branch-svg-2-bottom {
+      width: 100%;
+      height: 34px;
+      display: block;
+    }
+
+    .node-database {
+      border-color: rgba(59, 130, 246, 0.5);
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.15), rgba(15, 23, 42, 0.95));
+      width: 380px;
+      box-shadow: 0 0 30px rgba(59, 130, 246, 0.15);
+    }
+    .node-database .node-title { color: #60a5fa; }
+
+    .node-redis {
+      border-color: rgba(239, 68, 68, 0.5);
+      background: linear-gradient(135deg, rgba(220, 38, 38, 0.15), rgba(15, 23, 42, 0.95));
+      width: 300px;
+      box-shadow: 0 0 25px rgba(220, 38, 38, 0.12);
+    }
+    .node-redis .node-title { color: #f87171; }
+
+    /* ====================================================
+       TAB 4: PRISMA SCHEMA VIEWER
+       ==================================================== */
+    .schema-card {
+      display: none;
+      background: #090e1a;
+      border: 1px solid #1c273e;
+      border-radius: 14px;
+      padding: 24px;
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: #e2e8f0;
+      overflow-x: auto;
+      margin-top: 10px;
+    }
+
+    .code-keyword { color: #f43f5e; font-weight: 600; }
+    .code-type { color: #38bdf8; }
+    .code-attr { color: #fbbf24; }
+    .code-field { color: #a7f3d0; }
+    .code-comment { color: #64748b; font-style: italic; }
+
+    /* ====================================================
+       TAB 5: REQUEST LIFECYCLE
+       ==================================================== */
+    .lifecycle-card {
+      display: none;
+      background: #090e1a;
+      border: 1px solid #1c273e;
+      border-radius: 14px;
+      padding: 24px;
+      margin-top: 10px;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 14px 0;
+      border-bottom: 1px solid #162035;
+    }
+    .step-item:last-child { border-bottom: none; }
+
+    .step-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #1e293b;
+      border: 1.5px solid #38bdf8;
+      color: #38bdf8;
+      font-weight: 800;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .step-content h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+    .step-content p {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-top: 3px;
+    }
+
+    /* BOARD FOOTER */
+    .board-footer {
+      margin-top: 36px;
+      padding-top: 20px;
+      border-top: 1px solid #1c273e;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: var(--c-text-muted);
+    }
+
+    .footer-author {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .author-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f97316, #3b82f6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 12px;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+    }
+
+    .author-editable {
+      font-weight: 700;
+      color: #f1f5f9;
+      cursor: text;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px dashed #334155;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .author-editable:hover, .author-editable:focus {
+      border-color: #38bdf8;
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    .footer-metrics {
+      display: flex;
+      gap: 16px;
+      font-family: 'Fira Code', monospace;
+      font-size: 10px;
+    }
+
+    .metric-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: #94a3b8;
+    }
+    .metric-item span { color: #34d399; font-weight: 700; }
+
+    /* TOAST NOTIFICATION */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #10b981;
+      color: #064e3b;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Responsive */
+    @media (max-width: 860px) {
+      .entities-row, .tx-rows-grid, .adapters-grid, .state-machine-track {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .creates-bridge-wrap {
+        display: none;
+      }
+      .logistics-details-grid, .outbox-takeaways-grid {
+        grid-template-columns: 1fr;
+      }
+      #capture-card {
+        padding: 24px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- FLOATING TOOLBAR -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="brand-title">
+        <i data-lucide="cpu" style="color:#f97316; width:18px;"></i>
+        <span>SystemCraft</span>
+      </div>
+      <span class="brand-badge">Transactional Outbox</span>
+    </div>
+
+    <!-- TABS -->
+    <div class="toolbar-tabs">
+      <button class="tab-btn active" onclick="switchTab('outbox', this)">
+        <i data-lucide="zap" style="width:14px;"></i> Outbox &amp; Courier Flow
+      </button>
+      <button class="tab-btn" onclick="switchTab('logistics', this)">
+        <i data-lucide="package-check" style="width:14px;"></i> Order ➔ Shipment
+      </button>
+      <button class="tab-btn" onclick="switchTab('arch', this)">
+        <i data-lucide="network" style="width:14px;"></i> NestJS Stack Flow
+      </button>
+      <button class="tab-btn" onclick="switchTab('schema', this)">
+        <i data-lucide="database" style="width:14px;"></i> Prisma Models
+      </button>
+      <button class="tab-btn" onclick="switchTab('lifecycle', this)">
+        <i data-lucide="git-commit" style="width:14px;"></i> Request Lifecycle
+      </button>
+    </div>
+
+    <!-- ACTIONS -->
+    <div class="toolbar-actions">
+      <button class="btn" onclick="toggleAspect()" id="btn-aspect">
+        <i data-lucide="maximize" style="width:14px;"></i> Aspect: Full
+      </button>
+      <button class="btn" onclick="copyLinkedInCaption()">
+        <i data-lucide="copy" style="width:14px;"></i> Copy LinkedIn Caption
+      </button>
+      <button class="btn btn-primary" onclick="exportScreenshot()">
+        <i data-lucide="camera" style="width:14px;"></i> Download PNG (2x Retina)
+      </button>
+    </div>
+  </div>
+
+  <!-- SCREENSHOT CARD TARGET -->
+  <div id="capture-wrapper">
+    <div id="capture-card">
+
+      <!-- BOARD HEADER -->
+      <div class="board-header">
+        <div class="board-header-left">
+          <h1>
+            <span class="gradient-text">TRANSACTIONAL OUTBOX &amp; COURIER INTEGRATION</span>
+          </h1>
+          <p>Solving the Dual-Write Problem • Guaranteed At-Least-Once Delivery • Idempotent Kafka Consumer</p>
+        </div>
+
+        <div class="tech-stack-badges">
+          <div class="badge-pill pill-outbox">
+            <i data-lucide="layers" style="width:13px;"></i> Outbox Pattern
+          </div>
+          <div class="badge-pill pill-kafka">
+            <i data-lucide="radio" style="width:13px;"></i> Apache Kafka
+          </div>
+          <div class="badge-pill pill-postgres">
+            <i data-lucide="database" style="width:13px;"></i> ACID Postgres
+          </div>
+          <div class="badge-pill pill-courier">
+            <i data-lucide="truck" style="width:13px;"></i> Courier Adapter
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================
+           TAB 1: TRANSACTIONAL OUTBOX & COURIER FLOW (NEW)
+           ==================================================== -->
+      <div id="view-outbox" class="outbox-view-container">
+
+        <!-- 1. E-COMMERCE SERVICE BLOCK -->
+        <div class="service-block ecom">
+          <div class="service-block-header">
+            <div class="service-block-title">
+              <i data-lucide="store" style="color:#60a5fa; width:18px;"></i>
+              <span>E-COMMERCE SERVICE</span>
+            </div>
+            <span class="role-badge role-producer">Producer Service</span>
+          </div>
+
+          <!-- HTTP ENDPOINT TRIGGER -->
+          <div class="endpoint-pill">
+            <span class="method-post">POST</span>
+            <span>/api/v1/orders/checkout</span>
+          </div>
+
+          <!-- DB TRANSACTION INLINE BOX -->
+          <div class="inner-subcard">
+            <div class="inner-subcard-header">
+              <span><i data-lucide="lock" style="width:14px; margin-right:4px;"></i> DB TRANSACTION (ACID ATOMIC COMMIT)</span>
+              <span style="font-size:9.5px; color:#94a3b8;">Single DB Roundtrip</span>
+            </div>
+
+            <div class="tx-rows-grid">
+              <div class="tx-item">
+                <i data-lucide="shopping-bag"></i>
+                <span>Order Record</span>
+              </div>
+              <div class="tx-item">
+                <i data-lucide="file-text"></i>
+                <span>Shipment Intent</span>
+              </div>
+              <div class="tx-item outbox">
+                <i data-lucide="send"></i>
+                <span>Outbox Event</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ARROW TO POLLER -->
+        <div class="pipeline-arrow">
+          <div class="pipeline-line"></div>
+          <div class="pipeline-head"></div>
+        </div>
+
+        <!-- 2. OUTBOX POLLER -->
+        <div class="poller-card">
+          <div class="poller-left">
+            <i data-lucide="refresh-cw" style="color:#c084fc; width:18px;"></i>
+            <div>
+              <div class="poller-title">OUTBOX POLLER</div>
+              <div class="poller-sub">Debezium CDC Stream / Scheduled Poller Worker</div>
+            </div>
+          </div>
+          <span class="poller-badge">At-Least-Once</span>
+        </div>
+
+        <!-- ARROW TO KAFKA -->
+        <div class="pipeline-arrow">
+          <div class="pipeline-line" style="background: linear-gradient(to bottom, #a855f7, #f97316);"></div>
+          <div class="pipeline-head" style="border-top-color: #f97316;"></div>
+        </div>
+
+        <!-- 3. KAFKA BROKER -->
+        <div class="kafka-container">
+          <div class="kafka-header">
+            <i data-lucide="radio" style="color:#fb923c; width:18px;"></i>
+            <span>APACHE KAFKA MESSAGE BROKER</span>
+          </div>
+          <div class="kafka-topic-pill">
+            <i data-lucide="tag" style="width:14px;"></i>
+            <span>Topic: courier.shipment.events</span>
+          </div>
+        </div>
+
+        <!-- ARROW TO COURIER -->
+        <div class="pipeline-arrow">
+          <div class="pipeline-line" style="background: linear-gradient(to bottom, #f97316, #06b6d4);"></div>
+          <div class="pipeline-head" style="border-top-color: #06b6d4;"></div>
+        </div>
+
+        <!-- 4. COURIER SERVICE BLOCK -->
+        <div class="service-block courier">
+          <div class="service-block-header">
+            <div class="service-block-title">
+              <i data-lucide="truck" style="color:#22d3ee; width:18px;"></i>
+              <span>COURIER SERVICE</span>
+            </div>
+            <span class="role-badge role-consumer">Consumer Service</span>
+          </div>
+
+          <div class="endpoint-pill" style="border-color:#0e7490;">
+            <i data-lucide="radio" style="color:#22d3ee; width:13px;"></i>
+            <span>Kafka Consumer (Group: courier-fulfillment-workers)</span>
+          </div>
+
+          <div class="courier-stack">
+            <!-- 4.1 INBOX / IDEMPOTENCY -->
+            <div class="c-layer">
+              <div class="c-layer-top">
+                <span><i data-lucide="shield-check" style="width:13px; margin-right:4px;"></i> Inbox / Idempotency Layer</span>
+                <span style="color:#10b981;">KafkaProcessedEvent Table</span>
+              </div>
+              <div class="c-layer-desc">
+                Guarantees Exactly-Once processing semantics. Checks <code>event_id</code> before calling external APIs; drops duplicate messages.
+              </div>
+            </div>
+
+            <!-- 4.2 COURIER ADAPTER -->
+            <div class="c-layer">
+              <div class="c-layer-top">
+                <span><i data-lucide="cpu" style="width:13px; margin-right:4px;"></i> Courier Adapter (Strategy Pattern)</span>
+                <span style="color:#a855f7;">Unified Carrier Interface</span>
+              </div>
+              <div class="adapters-grid">
+                <div class="adapter-card">
+                  <i data-lucide="send"></i>
+                  <span>Shiprocket</span>
+                </div>
+                <div class="adapter-card">
+                  <i data-lucide="truck"></i>
+                  <span>Delhivery</span>
+                </div>
+                <div class="adapter-card">
+                  <i data-lucide="globe"></i>
+                  <span>Other Carriers</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4.3 TRACKING STATE MACHINE -->
+            <div class="c-layer">
+              <div class="c-layer-top">
+                <span><i data-lucide="git-commit" style="width:13px; margin-right:4px;"></i> Tracking State Machine</span>
+                <span style="color:#fbbf24;">Webhook Driven</span>
+              </div>
+              <div class="state-machine-track">
+                <div class="state-step active">
+                  <span class="state-name">PICKED_UP</span>
+                  <span class="state-sub">Hub Scanned</span>
+                </div>
+                <div class="state-step active">
+                  <span class="state-name">IN_TRANSIT</span>
+                  <span class="state-sub">Line Haul</span>
+                </div>
+                <div class="state-step active">
+                  <span class="state-name">OUT_FOR_DELIVERY</span>
+                  <span class="state-sub">Rider Assigned</span>
+                </div>
+                <div class="state-step active">
+                  <span class="state-name">DELIVERED</span>
+                  <span class="state-sub">OTP Verified</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3 TAKEAWAY BULLETS FOR LINKEDIN -->
+        <div class="outbox-takeaways-grid">
+          <div class="takeaway-card">
+            <div class="takeaway-top">
+              <i data-lucide="shield-alert" style="color:#38bdf8; width:16px;"></i>
+              <span>Zero Dual-Write Risk</span>
+            </div>
+            <p>Writing Order + Outbox in one atomic SQL transaction ensures the database and message broker never fall out of sync.</p>
+          </div>
+
+          <div class="takeaway-card">
+            <div class="takeaway-top">
+              <i data-lucide="check-check" style="color:#a855f7; width:16px;"></i>
+              <span>Idempotent Consumer</span>
+            </div>
+            <p>Kafka guarantees At-Least-Once delivery. The <code>KafkaProcessedEvent</code> table prevents duplicate AWB generation and double carrier charges.</p>
+          </div>
+
+          <div class="takeaway-card">
+            <div class="takeaway-top">
+              <i data-lucide="code" style="color:#f97316; width:16px;"></i>
+              <span>Pluggable Courier Strategy</span>
+            </div>
+            <p>Courier Adapter abstracts Shiprocket, Delhivery, and FedEx behind a common interface so vendor API changes never break core logic.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ====================================================
+           TAB 2: ORDER ➔ SHIPMENT (LOGISTICS BOUNDED CONTEXT)
+           ==================================================== -->
+      <div id="view-logistics" class="logistics-view-container">
+
+        <div class="domains-top-banner">
+          <div class="domain-badge-box domain-ecom">
+            <i data-lucide="shopping-bag" style="width:14px;"></i>
+            <span>E-COMMERCE DOMAIN</span>
+          </div>
+
+          <div class="domain-connector-sub">
+            <span>Async Event Bridge (OrderPaidEvent)</span>
+            <i data-lucide="arrow-right" style="width:14px; color:#a855f7;"></i>
+          </div>
+
+          <div class="domain-badge-box domain-logistics">
+            <i data-lucide="truck" style="width:14px;"></i>
+            <span>LOGISTICS DOMAIN</span>
+          </div>
+        </div>
+
+        <div class="entities-row">
+          <!-- 1. ORDER (E-COMMERCE) -->
+          <div class="entity-box order">
+            <div class="entity-header">
+              <div class="entity-title-group">
+                <i data-lucide="clipboard-list" style="color:#fbbf24; width:20px;"></i>
+                <h2>ORDER</h2>
+              </div>
+              <span class="entity-meta-tag">E-Commerce Entity</span>
+            </div>
+
+            <div class="fields-list">
+              <div class="field-row">
+                <div class="field-left">
+                  <span class="key-badge key-pk">PK</span>
+                  <span>Order ID</span>
+                </div>
+                <div class="field-right">UUID / #ORD-98421</div>
+              </div>
+              <div class="field-row">
+                <div class="field-left">
+                  <i data-lucide="package" style="color:#94a3b8; width:14px;"></i>
+                  <span>Items</span>
+                </div>
+                <div class="field-right">List&lt;OrderItem&gt; (SKU, Qty)</div>
+              </div>
+              <div class="field-row">
+                <div class="field-left">
+                  <i data-lucide="dollar-sign" style="color:#94a3b8; width:14px;"></i>
+                  <span>Amount</span>
+                </div>
+                <div class="field-right">Subtotal, Taxes &amp; Discounts</div>
+              </div>
+              <div class="field-row">
+                <div class="field-left">
+                  <i data-lucide="credit-card" style="color:#94a3b8; width:14px;"></i>
+                  <span>Payment</span>
+                </div>
+                <div class="field-right">
+                  <span class="status-active-pill">CAPTURED</span>
+                </div>
+              </div>
+              <div class="field-row">
+                <div class="field-left">
+                  <i data-lucide="user" style="color:#94a3b8; width:14px;"></i>
+                  <span>Customer</span>
+                </div>
+                <div class="field-right">UserID, Name &amp; Contact</div>
+              </div>
+              <div class="field-row">
+                <div class="field-left">
+                  <i data-lucide="map-pin" style="color:#94a3b8; width:14px;"></i>
+                  <span>Address</span>
+                </div>
+                <div class="field-right">Street, City, Pincode</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. SHIPMENT (LOGISTICS) -->
+          <div class="entity-box shipment">
+            <div class="entity-header">
+              <div class="entity-title-group">
+                <i data-lucide="box" style="color:#38bdf8; width:20px;"></i>
+                <h2>SHIPMENT</h2>
+              </div>
+              <span class="entity-meta-tag">Logistics Entity</span>
+            </div>
+
+            <div class="fields-list">
+              <div class="field-row">
+                <div class="field-left">
+                  <span class="key-badge key-awb">PK</span>
+                  <span>Shipment ID</span>
+                </div>
+                <div class="field-right">UUID / #SHP-40112</div>
+              </div>
+              <div class="field-row">
+                <div class="field-left">
+                  <i data-lucide="barcode" style="color:#38bdf8; width:14px;"></i>
+                  <span style="color:#38bdf8; font-weight:700;">AWB</span>
+                </div>
+                <div class="field-right" style="color:#38bdf8; font-weight:700;">#DL992817465IN</div>
+              </div>
+              <div class="field-row">
+                <div class="field-left">
+                  <i data-lucide="navigation" style="color:#94a3b8; width:14px;"></i>
+                  <span>Tracking</span>
+                </div>
+                <div class="field-right">Carrier Real-Time GPS Milestones</div>
+              </div>
+              <div class="field-row">
+                <div class="field-left">
+                  <i data-lucide="truck" style="color:#94a3b8; width:14px;"></i>
+                  <span>Courier</span>
+                </div>
+                <div class="field-right">Delhivery / Bluedart / Shiprocket</div>
+              </div>
+              <div class="field-row">
+                <div class="field-left">
+                  <i data-lucide="scale" style="color:#94a3b8; width:14px;"></i>
+                  <span>Weight</span>
+                </div>
+                <div class="field-right">0.850 kg (Dead Weight)</div>
+              </div>
+              <div class="field-row">
+                <div class="field-left">
+                  <i data-lucide="maximize-2" style="color:#94a3b8; width:14px;"></i>
+                  <span>Dimensions</span>
+                </div>
+                <div class="field-right">24 × 16 × 8 cm (Volumetric)</div>
+              </div>
+              <div class="field-row">
+                <div class="field-left">
+                  <i data-lucide="check-circle" style="color:#10b981; width:14px;"></i>
+                  <span>Status</span>
+                </div>
+                <div class="field-right">
+                  <span class="status-active-pill">IN_TRANSIT</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="creates-bridge-wrap">
+          <svg class="creates-svg" viewBox="0 0 960 70" preserveAspectRatio="none">
+            <path d="M 240 0 L 240 45 L 720 45 L 720 6" fill="none" stroke="url(#createsGradient)" stroke-width="3" stroke-dasharray="6,6"/>
+            <polygon points="713,10 720,0 727,10" fill="#38bdf8" />
+            <defs>
+              <linearGradient id="createsGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#fbbf24" />
+                <stop offset="50%" stop-color="#a855f7" />
+                <stop offset="100%" stop-color="#38bdf8" />
+              </linearGradient>
+            </defs>
+          </svg>
+
+          <div class="creates-pill-badge">
+            <div class="creates-pulse"></div>
+            <span class="creates-text">creates ──▶</span>
+            <span class="creates-subtext">OrderPaidEvent ➔ BullMQ Worker ➔ Courier AWB Gen</span>
+          </div>
+        </div>
+
+        <div class="logistics-details-grid">
+          <div class="detail-card">
+            <div class="detail-card-top">
+              <i data-lucide="split" style="color:#fbbf24; width:16px;"></i>
+              <span>1 : N Split Shipments</span>
+            </div>
+            <p>1 Order can trigger multiple Shipments if items reside in different fulfillment centers (e.g. Mumbai vs Delhi warehouse).</p>
+          </div>
+
+          <div class="detail-card">
+            <div class="detail-card-top">
+              <i data-lucide="shield-check" style="color:#a855f7; width:16px;"></i>
+              <span>Courier Outage Resilience</span>
+            </div>
+            <p>Courier API latencies or downtimes never block customer checkout. Shipment creation runs reliably via asynchronous BullMQ queues.</p>
+          </div>
+
+          <div class="detail-card">
+            <div class="detail-card-top">
+              <i data-lucide="refresh-cw" style="color:#38bdf8; width:16px;"></i>
+              <span>Two-Way Webhook Sync</span>
+            </div>
+            <p>Carrier pushes milestone webhooks (Out for Delivery ➔ Delivered) which updates Shipment, triggering Order state completion.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ====================================================
+           TAB 3: NESTJS ARCHITECTURE FLOW TREE
+           ==================================================== -->
+      <div id="view-arch" class="flow-tree">
+
+        <div class="node-card node-customer">
+          <div class="node-header">
+            <i data-lucide="user-check" style="color:#60a5fa; width:18px;"></i>
+            <span class="node-title">CUSTOMER</span>
+          </div>
+          <div class="node-subtitle">Web Browser / Mobile Client</div>
+          <div class="node-tags">
+            <span class="tag-sm">HTTPS / TLS 1.3</span>
+            <span class="tag-sm">JWT Auth Header</span>
+          </div>
+        </div>
+
+        <div class="connector-v">
+          <div class="connector-line"></div>
+          <div class="arrow-head"></div>
+        </div>
+
+        <div class="node-card node-web">
+          <div class="node-header">
+            <i data-lucide="globe" style="color:#22d3ee; width:18px;"></i>
+            <span class="node-title">E-COMMERCE WEB</span>
+          </div>
+          <div class="node-subtitle">React 18 / Vite SPA</div>
+          <div class="node-tags">
+            <span class="tag-sm">TanStack Query</span>
+            <span class="tag-sm">Zustand State</span>
+            <span class="tag-sm">Tailwind CSS</span>
+            <span class="tag-sm">Axios Interceptors</span>
+          </div>
+        </div>
+
+        <div class="connector-v">
+          <div class="connector-line"></div>
+          <div class="arrow-head"></div>
+        </div>
+
+        <div class="node-card node-nestjs">
+          <div class="node-header">
+            <i data-lucide="server" style="color:#ff476e; width:18px;"></i>
+            <span class="node-title">NESTJS API GATEWAY</span>
+          </div>
+          <div class="node-subtitle">Modular TypeScript Core Backend</div>
+          <div class="node-tags">
+            <span class="tag-sm">Global ValidationPipe</span>
+            <span class="tag-sm">Guards &amp; Interceptors</span>
+            <span class="tag-sm">Rate Limiting (Throttler)</span>
+            <span class="tag-sm">Swagger OpenAPI</span>
+          </div>
+        </div>
+
+        <div class="branch-3-container">
+          <svg class="branch-svg-top" viewBox="0 0 900 36" preserveAspectRatio="none">
+            <path d="M 450 0 L 450 18 M 150 18 L 750 18 M 150 18 L 150 36 M 450 18 L 450 36 M 750 18 L 750 36" 
+                  fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="4,4"/>
+          </svg>
+
+          <div class="branch-3-grid">
+            <div class="node-card node-module node-auth">
+              <div class="node-header">
+                <i data-lucide="shield-check" style="color:#c084fc; width:16px;"></i>
+                <span class="node-title">AUTH MODULE</span>
+              </div>
+              <div class="node-subtitle">Passport.js &amp; JWT</div>
+              <div class="node-tags">
+                <span class="tag-sm">Argon2 Hash</span>
+                <span class="tag-sm">Refresh Tokens</span>
+                <span class="tag-sm">RBAC Roles</span>
+              </div>
+            </div>
+
+            <div class="node-card node-module node-products">
+              <div class="node-header">
+                <i data-lucide="package" style="color:#60a5fa; width:16px;"></i>
+                <span class="node-title">PRODUCTS MODULE</span>
+              </div>
+              <div class="node-subtitle">Catalog &amp; Search</div>
+              <div class="node-tags">
+                <span class="tag-sm">Category Tree</span>
+                <span class="tag-sm">Inventory Check</span>
+                <span class="tag-sm">Price Engine</span>
+              </div>
+            </div>
+
+            <div class="node-card node-module node-cart">
+              <div class="node-header">
+                <i data-lucide="shopping-cart" style="color:#34d399; width:16px;"></i>
+                <span class="node-title">CART MODULE</span>
+              </div>
+              <div class="node-subtitle">Cart &amp; Checkout Prep</div>
+              <div class="node-tags">
+                <span class="tag-sm">Session Carts</span>
+                <span class="tag-sm">Item Sync</span>
+                <span class="tag-sm">Coupon Engine</span>
+              </div>
+            </div>
+          </div>
+
+          <svg class="branch-svg-bottom" viewBox="0 0 900 36" preserveAspectRatio="none">
+            <path d="M 150 0 L 150 18 M 450 0 L 450 18 M 750 0 L 750 18 M 150 18 L 750 18 M 450 18 L 450 36" 
+                  fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="4,4"/>
+          </svg>
+        </div>
+
+        <div class="node-card node-order">
+          <div class="node-header">
+            <i data-lucide="clipboard-check" style="color:#fbbf24; width:18px;"></i>
+            <span class="node-title">ORDER MODULE</span>
+          </div>
+          <div class="node-subtitle">Central Order State Machine &amp; Orchestrator</div>
+          <div class="node-tags">
+            <span class="tag-sm">State: PENDING ➔ PAID ➔ SHIPPED</span>
+            <span class="tag-sm">Idempotent Keys</span>
+            <span class="tag-sm">Saga Pattern</span>
+          </div>
+        </div>
+
+        <div class="branch-2-container">
+          <svg class="branch-svg-2-top" viewBox="0 0 720 34" preserveAspectRatio="none">
+            <path d="M 360 0 L 360 17 M 180 17 L 540 17 M 180 17 L 180 34 M 540 17 L 540 34" 
+                  fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,4"/>
+          </svg>
+
+          <div class="branch-2-grid">
+            <div class="node-card node-payment">
+              <div class="node-header">
+                <i data-lucide="credit-card" style="color:#d8b4fe; width:16px;"></i>
+                <span class="node-title">PAYMENT MODULE</span>
+              </div>
+              <div class="node-subtitle">Payment Intent &amp; Webhook Handler</div>
+              <div class="sub-gateway-box">
+                <i data-lucide="check-check" style="color:#34d399; width:14px;"></i>
+                <span>Razorpay / Stripe</span>
+              </div>
+              <div class="node-tags">
+                <span class="tag-sm">Signature Verification</span>
+                <span class="tag-sm">Auto Refund</span>
+              </div>
+            </div>
+
+            <div class="node-card node-shipping">
+              <div class="node-header">
+                <i data-lucide="truck" style="color:#67e8f9; width:16px;"></i>
+                <span class="node-title">SHIPPING MODULE</span>
+              </div>
+              <div class="node-subtitle">Logistics &amp; Courier Dispatcher</div>
+              <div class="sub-gateway-box">
+                <i data-lucide="navigation" style="color:#38bdf8; width:14px;"></i>
+                <span>Courier Platform (Shiprocket/Delhivery)</span>
+              </div>
+              <div class="node-tags">
+                <span class="tag-sm">AWB Gen</span>
+                <span class="tag-sm">Tracking Webhook</span>
+              </div>
+            </div>
+          </div>
+
+          <svg class="branch-svg-2-bottom" viewBox="0 0 720 34" preserveAspectRatio="none">
+            <path d="M 180 0 L 180 17 M 540 0 L 540 17 M 180 17 L 540 17 M 360 17 L 360 34" 
+                  fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,4"/>
+          </svg>
+        </div>
+
+        <div class="node-card node-database">
+          <div class="node-header">
+            <i data-lucide="database" style="color:#60a5fa; width:18px;"></i>
+            <span class="node-title">POSTGRESQL + PRISMA ORM</span>
+          </div>
+          <div class="node-subtitle">Relational Persistence Layer &amp; Type-Safe Client</div>
+          <div class="node-tags">
+            <span class="tag-sm">ACID Transactions</span>
+            <span class="tag-sm">Connection Pooling</span>
+            <span class="tag-sm">Automated Migrations</span>
+            <span class="tag-sm">Strict Foreign Keys</span>
+          </div>
+        </div>
+
+        <div class="connector-v">
+          <div class="connector-line" style="background: linear-gradient(to bottom, #3b82f6, #ef4444);"></div>
+          <div class="arrow-head" style="border-top-color: #ef4444;"></div>
+        </div>
+
+        <div class="node-card node-redis">
+          <div class="node-header">
+            <i data-lucide="zap" style="color:#f87171; width:18px;"></i>
+            <span class="node-title">REDIS</span>
+          </div>
+          <div class="node-subtitle">In-Memory Cache &amp; Distributed Tasks</div>
+          <div class="node-tags">
+            <span class="tag-sm">Cart State TTL</span>
+            <span class="tag-sm">BullMQ Queue</span>
+            <span class="tag-sm">Redlock Distributed Lock</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ====================================================
+           TAB 4: PRISMA SCHEMA VIEWER
+           ==================================================== -->
+      <div id="view-schema" class="schema-card">
+<pre><code><span class="code-comment">// prisma/schema.prisma</span>
+<span class="code-keyword">datasource</span> db {
+  <span class="code-field">provider</span> = <span class="code-type">"postgresql"</span>
+  <span class="code-field">url</span>      = <span class="code-type">env("DATABASE_URL")</span>
+}
+
+<span class="code-keyword">model</span> <span class="code-type">Order</span> {
+  <span class="code-field">id</span>            <span class="code-type">String</span>        <span class="code-attr">@id @default(uuid())</span>
+  <span class="code-field">userId</span>        <span class="code-type">String</span>
+  <span class="code-field">totalAmount</span>   <span class="code-type">Decimal</span>       <span class="code-attr">@db.Decimal(10, 2)</span>
+  <span class="code-field">status</span>        <span class="code-type">OrderStatus</span>   <span class="code-attr">@default(PENDING)</span>
+  <span class="code-field">items</span>         <span class="code-type">OrderItem[]</span>
+  <span class="code-field">shipment</span>      <span class="code-type">Shipment?</span>
+  <span class="code-field">outboxEvents</span>  <span class="code-type">OutboxEvent[]</span>
+  <span class="code-field">createdAt</span>     <span class="code-type">DateTime</span>      <span class="code-attr">@default(now())</span>
+}
+
+<span class="code-comment">// Transactional Outbox Table</span>
+<span class="code-keyword">model</span> <span class="code-type">OutboxEvent</span> {
+  <span class="code-field">id</span>            <span class="code-type">String</span>        <span class="code-attr">@id @default(uuid())</span>
+  <span class="code-field">orderId</span>       <span class="code-type">String</span>
+  <span class="code-field">order</span>         <span class="code-type">Order</span>         <span class="code-attr">@relation(fields: [orderId], references: [id])</span>
+  <span class="code-field">topic</span>         <span class="code-type">String</span>        <span class="code-comment">// "courier.shipment.events"</span>
+  <span class="code-field">payload</span>       <span class="code-type">Json</span>
+  <span class="code-field">status</span>        <span class="code-type">OutboxStatus</span>  <span class="code-attr">@default(UNPROCESSED)</span>
+  <span class="code-field">createdAt</span>     <span class="code-type">DateTime</span>      <span class="code-attr">@default(now())</span>
+}
+
+<span class="code-comment">// Idempotent Consumer (Inbox Table in Courier Service)</span>
+<span class="code-keyword">model</span> <span class="code-type">KafkaProcessedEvent</span> {
+  <span class="code-field">eventId</span>       <span class="code-type">String</span>        <span class="code-attr">@id</span>
+  <span class="code-field">topic</span>         <span class="code-type">String</span>
+  <span class="code-field">processedAt</span>   <span class="code-type">DateTime</span>      <span class="code-attr">@default(now())</span>
+}</code></pre>
+      </div>
+
+      <!-- ====================================================
+           TAB 5: REQUEST LIFECYCLE
+           ==================================================== -->
+      <div id="view-lifecycle" class="lifecycle-card">
+        <div class="step-item">
+          <div class="step-badge">1</div>
+          <div class="step-content">
+            <h4>Customer Initiates Checkout</h4>
+            <p>Customer sends <code>POST /api/v1/orders/checkout</code> with cart items, shipping address, and payment method.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-badge">2</div>
+          <div class="step-content">
+            <h4>Atomic SQL Transaction (Order + Outbox)</h4>
+            <p>E-Commerce Service commits Order, Shipment Intent, and Outbox Event into PostgreSQL within a single atomic transaction.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-badge">3</div>
+          <div class="step-content">
+            <h4>Outbox Poller / Debezium CDC Stream</h4>
+            <p>Outbox Poller queries unprocessed events from PostgreSQL WAL, publishes them to Kafka, and marks them as PROCESSED.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-badge">4</div>
+          <div class="step-content">
+            <h4>Kafka Delivers to courier.shipment.events</h4>
+            <p>Apache Kafka guarantees durable, ordered message retention partitioned by <code>order_id</code>.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-badge">5</div>
+          <div class="step-content">
+            <h4>Courier Service Deduplication (Inbox Pattern)</h4>
+            <p>Consumer checks <code>KafkaProcessedEvent</code> table. If the event ID was previously processed, it drops the message to prevent duplicate AWB generation.</p>
+          </div>
+        </div>
+        <div class="step-item">
+          <div class="step-badge">6</div>
+          <div class="step-content">
+            <h4>Courier Adapter Calls Delhivery / Shiprocket</h4>
+            <p>Adapter translates payload into courier-specific API request, fetches AWB tracking number, and initialises Tracking State Machine.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOARD FOOTER -->
+      <div class="board-footer">
+        <div class="footer-author">
+          <div class="author-avatar">MK</div>
+          <div>
+            <div style="font-size: 10px; color:#64748b;">SYSTEM ARCHITECT</div>
+            <span class="author-editable" contenteditable="true" title="Click to edit with your LinkedIn handle!">
+              Mrityunjay Kumar | Full Stack &amp; Distributed Systems Architect
+            </span>
+          </div>
+        </div>
+
+        <div class="footer-metrics">
+          <div class="metric-item">
+            <i data-lucide="shield" style="width:12px; color:#3b82f6;"></i> ACID: <span>Atomic Outbox</span>
+          </div>
+          <div class="metric-item">
+            <i data-lucide="radio" style="width:12px; color:#f97316;"></i> Broker: <span>Apache Kafka</span>
+          </div>
+          <div class="metric-item">
+            <i data-lucide="check-circle-2" style="width:12px; color:#10b981;"></i> Semantics: <span>Exactly-Once</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast">
+    <i data-lucide="check-circle" style="width:18px;"></i>
+    <span id="toast-msg">Screenshot ready! Downloading...</span>
+  </div>
+
+  <script>
+    // Initialize icons
+    lucide.createIcons();
+
+    let currentActiveTab = 'outbox';
+
+    // Tab Switcher
+    function switchTab(tab, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentActiveTab = tab;
+
+      document.getElementById('view-outbox').style.display = (tab === 'outbox') ? 'flex' : 'none';
+      document.getElementById('view-logistics').style.display = (tab === 'logistics') ? 'flex' : 'none';
+      document.getElementById('view-arch').style.display = (tab === 'arch') ? 'flex' : 'none';
+      document.getElementById('view-schema').style.display = (tab === 'schema') ? 'block' : 'none';
+      document.getElementById('view-lifecycle').style.display = (tab === 'lifecycle') ? 'block' : 'none';
+    }
+
+    // Toggle Aspect Ratio
+    let currentRatio = 'full';
+    function toggleAspect() {
+      const wrapper = document.getElementById('capture-wrapper');
+      const btn = document.getElementById('btn-aspect');
+
+      if (currentRatio === 'full') {
+        currentRatio = '4-5';
+        wrapper.className = 'ratio-4-5';
+        btn.innerHTML = '<i data-lucide="maximize" style="width:14px;"></i> Aspect: 4:5 (Mobile)';
+      } else if (currentRatio === '4-5') {
+        currentRatio = '16-9';
+        wrapper.className = 'ratio-16-9';
+        btn.innerHTML = '<i data-lucide="maximize" style="width:14px;"></i> Aspect: 16:9 (Desktop)';
+      } else {
+        currentRatio = 'full';
+        wrapper.className = '';
+        btn.innerHTML = '<i data-lucide="maximize" style="width:14px;"></i> Aspect: Full';
+      }
+      lucide.createIcons();
+    }
+
+    // High-Res Screenshot
+    function exportScreenshot() {
+      const card = document.getElementById('capture-card');
+      showToast('📸 Generating 2x Retina PNG for LinkedIn...');
+
+      window.scrollTo(0, 0);
+
+      html2canvas(card, {
+        scale: 2,
+        backgroundColor: '#07090e',
+        useCORS: true,
+        logging: false
+      }).then(canvas => {
+        const link = document.createElement('a');
+        let filename = 'transactional-outbox-courier-system-design.png';
+        if (currentActiveTab === 'logistics') filename = 'order-creates-shipment-logistics.png';
+        else if (currentActiveTab === 'arch') filename = 'ecommerce-system-architecture.png';
+
+        link.download = filename;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('✅ Download complete! Perfect for LinkedIn.');
+      }).catch(err => {
+        console.error(err);
+        showToast('❌ Export error. Use Win + Shift + S to clip.');
+      });
+    }
+
+    // Copy LinkedIn Caption
+    function copyLinkedInCaption() {
+      let caption = '';
+
+      if (currentActiveTab === 'outbox') {
+        caption = `⚡ How to Guarantee Zero Event Loss: The Transactional Outbox Pattern in Microservices! 🚀
+
+Have you ever encountered this classic distributed systems nightmare?
+👉 Your API writes an Order to PostgreSQL...
+👉 But before it can publish an event to Kafka, the server crashes, network times out, or the broker rejects it.
+Result: The database committed, but downstream services never received the event. Data corruption! 💥
+
+The naive solution of "dual writes" (HTTP call writing to DB + Kafka) is an anti-pattern.
+Here is how we solved it with the Transactional Outbox & Idempotent Consumer Pattern:
+
+1️⃣ E-COMMERCE SERVICE (The Atomic Outbox):
+• When the customer triggers 'POST /api/v1/orders/checkout', we wrap 3 writes in a SINGLE ACID PostgreSQL transaction:
+   1. Order Record
+   2. Shipment Intent
+   3. Outbox Event (payload, topic, UNPROCESSED status)
+• If the DB write succeeds, the event is guaranteed to be persisted. If it fails, everything rolls back. Zero dual-write risk!
+
+2️⃣ OUTBOX POLLER (CDC / Worker):
+• A lightweight background worker (or Debezium CDC via Postgres WAL) polls unprocessed events and publishes them to Apache Kafka.
+• Once acknowledged by Kafka, it marks the event as PROCESSED.
+• Guarantee: At-Least-Once Delivery to the message broker.
+
+3️⃣ KAFKA MESSAGE BROKER:
+• Topic: 'courier.shipment.events', partitioned by 'order_id' to guarantee in-order delivery per order.
+
+4️⃣ COURIER SERVICE (Idempotent Consumer):
+• Kafka provides At-Least-Once delivery, which means duplicates can happen on retries.
+• The Courier Consumer uses an Inbox / Idempotency Table ('KafkaProcessedEvent').
+• If 'event_id' already exists, it acks and skips processing! No duplicate shipping labels, no double carrier charges!
+
+5️⃣ COURIER ADAPTER (Strategy Pattern):
+• Clean vendor abstraction over third-party APIs (Shiprocket, Delhivery, Bluedart).
+• Switching or adding new courier partners requires zero changes to core business logic.
+
+6️⃣ TRACKING STATE MACHINE:
+• Manages real-time courier milestone webhooks:
+  PICKED_UP ➔ IN_TRANSIT ➔ OUT_FOR_DELIVERY ➔ DELIVERED.
+
+Architectural resilience isn't an afterthought—it's designed into the data flow.
+What pattern do you use to solve the Dual-Write problem in your stack? Outbox or 2PC? Let me know below! 👇
+
+#SystemDesign #SoftwareArchitecture #Microservices #Kafka #PostgreSQL #OutboxPattern #Backend #Engineering #DistributedSystems #Idempotency`;
+      } else if (currentActiveTab === 'logistics') {
+        caption = `📦 Why E-Commerce (ORDER) and Logistics (SHIPMENT) MUST Be Separate Bounded Contexts!
+
+A common architectural pitfall in e-commerce backends is tightly coupling courier APIs (Shiprocket, Delhivery, Bluedart) directly into the Order service.
+
+Here is why decoupling ORDER and SHIPMENT into two distinct domains is a game-changer:
+
+1️⃣ E-COMMERCE DOMAIN (ORDER):
+• Primary Goal: Customer purchase intent and payment finality.
+• Core Data: Order ID, Items, Total Amount, Payment Status, Customer Profile, Delivery Address.
+• Invariance: Immutable once payment is captured.
+
+2️⃣ LOGISTICS DOMAIN (SHIPMENT):
+• Primary Goal: Physical movement, package dimensions, hub routing, and carrier tracking.
+• Core Data: Shipment ID, AWB (Air Waybill), Courier Partner, Dead Weight, Volumetric Dimensions, Real-Time Transit Status.
+• Invariance: Highly dynamic state machine (MANIFESTED ➔ PICKED_UP ➔ IN_TRANSIT ➔ OUT_FOR_DELIVERY ➔ DELIVERED).
+
+3️⃣ THE "CREATES" ASYNC BRIDGE:
+• When Order is paid, it emits an 'OrderPaidEvent'.
+• An asynchronous background worker (BullMQ / Redis) consumes the event, calculates volumetric weight, calls the Courier API, and assigns an AWB number.
+• 💡 Key Benefit: 1 Order can spawn MULTIPLE Shipments if products ship from different regional warehouses!
+
+4️⃣ FAULT TOLERANCE & WEBHOOKS:
+• If Courier APIs experience downtime or latency spikes, customer checkout NEVER fails.
+• When couriers deliver the package, their webhook updates Shipment status, which in turn flips Order to 'DELIVERED'.
+
+How do you model your fulfillment pipeline? Do you keep shipments in the monolith or as a separate service? 👇
+
+#SystemDesign #SoftwareArchitecture #Microservices #Backend #ECommerce #Logistics #TypeScript #NestJS #PostgreSQL #Prisma #Redis`;
+      } else {
+        caption = `🚀 Production-Grade E-Commerce System Architecture: React + NestJS + Prisma + PostgreSQL + Redis
+
+When architecting a modern e-commerce application, separating responsibilities into clear modular boundaries ensures scalability, maintainability, and clean state management.
+
+#NestJS #React #Prisma #PostgreSQL #Redis #SystemDesign #SoftwareArchitecture #FullStack #WebDevelopment #Backend #Stripe #Razorpay`;
+      }
+
+      navigator.clipboard.writeText(caption).then(() => {
+        showToast('📋 LinkedIn Caption copied to clipboard!');
+      }).catch(() => {
+        showToast('Failed to copy. Please copy manually.');
+      });
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      const tm = document.getElementById('toast-msg');
+      tm.innerText = msg;
+      t.classList.add('show');
+      setTimeout(() => {
+        t.classList.remove('show');
+      }, 3500);
+    }
+  </script>
+</body>
+</html>
