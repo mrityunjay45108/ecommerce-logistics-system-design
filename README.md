@@ -126,13 +126,26 @@ This repository includes a single-file, interactive studio (`index.html`) ready 
 ```bash
 # Windows
 start index.html
+start day4-excalidraw.html
 
 # macOS
 open index.html
+open day4-excalidraw.html
 
 # Linux
 xdg-open index.html
+xdg-open day4-excalidraw.html
 ```
+
+---
+
+## 🎨 Day 4 Excalidraw Edition (`day4-excalidraw.html`)
+Includes an authentic hand-drawn Excalidraw aesthetic figure designed specifically for **LinkedIn Day 4/30 Architecture Series**:
+- Hand-drawn Virgil/Kalam typography & rough sketch shapes.
+- Complete Order to Courier Logistics pipeline (E-Commerce ➔ Kafka ➔ Inbox Check ➔ State Machine ➔ Courier Partners).
+- Light / Dark Excalidraw theme toggle.
+- 2.5x Retina PNG export button.
+- 1-click Day 4 LinkedIn caption copy.
 
 ---
 

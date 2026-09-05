@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 4 – Order to Courier Logistics Flow (Excalidraw Style) | LinkedIn Post</title>
+  <!-- Google Fonts: Excalidraw Hand-drawn typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fira+Code:wght@500;600&family=Kalam:wght@400;700&family=Patrick+Hand&family=Shantell+Sans:wght@500;600;700&display=swap" rel="stylesheet">
+  <!-- html2canvas for High-Res PNG export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --ex-bg: #ffffff;
+      --ex-grid: rgba(0, 0, 0, 0.05);
+      --ex-text: #1e1e1e;
+      --ex-text-muted: #495057;
+      --ex-stroke: #1e1e1e;
+      
+      --ex-blue-border: #1971c2;
+      --ex-blue-bg: #e7f5ff;
+      --ex-blue-text: #1864ab;
+      
+      --ex-purple-border: #6741d9;
+      --ex-purple-bg: #f3f0ff;
+      --ex-purple-text: #5f3dc4;
+      
+      --ex-green-border: #2b8a3e;
+      --ex-green-bg: #ebfbee;
+      --ex-green-text: #2b8a3e;
+      
+      --ex-red-border: #c92a2a;
+      --ex-red-bg: #fff5f5;
+      --ex-red-text: #c92a2a;
+
+      --ex-card-shadow: 2px 3px 0px rgba(0, 0, 0, 0.8);
+    }
+
+    body.dark-mode {
+      --ex-bg: #121212;
+      --ex-grid: rgba(255, 255, 255, 0.06);
+      --ex-text: #f1f3f5;
+      --ex-text-muted: #ced4da;
+      --ex-stroke: #e9ecef;
+      
+      --ex-blue-border: #4dabf7;
+      --ex-blue-bg: rgba(25, 113, 194, 0.2);
+      --ex-blue-text: #74c0fc;
+      
+      --ex-purple-border: #9775fa;
+      --ex-purple-bg: rgba(103, 65, 217, 0.2);
+      --ex-purple-text: #b197fc;
+      
+      --ex-green-border: #51cf66;
+      --ex-green-bg: rgba(43, 138, 62, 0.2);
+      --ex-green-text: #69db7c;
+      
+      --ex-red-border: #ff6b6b;
+      --ex-red-bg: rgba(201, 42, 42, 0.2);
+      --ex-red-text: #ff8787;
+
+      --ex-card-shadow: 2px 3px 0px rgba(255, 255, 255, 0.8);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #f1f3f5;
+      color: var(--ex-text);
+      font-family: 'Patrick Hand', 'Kalam', 'Caveat', cursive, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    /* TOP TOOLBAR (Does not appear in screenshot) */
+    .action-bar {
+      width: 100%;
+      max-width: 1240px;
+      background: #ffffff;
+      border: 2px solid #1e1e1e;
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 10px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 3px 3px 0px #1e1e1e;
+    }
+
+    body.dark-mode .action-bar {
+      background: #1e1e1e;
+      border-color: #e9ecef;
+      box-shadow: 3px 3px 0px #e9ecef;
+      color: #fff;
+    }
+
+    .action-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .badge-day {
+      background: #6741d9;
+      color: #fff;
+      font-size: 13px;
+      padding: 2px 10px;
+      border-radius: 12px;
+    }
+
+    .action-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-tool {
+      background: #ffffff;
+      border: 2px solid #1e1e1e;
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 6px 14px;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 15px;
+      font-weight: 700;
+      color: #1e1e1e;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 2px 2px 0px #1e1e1e;
+      transition: all 0.15s;
+    }
+
+    .btn-tool:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0px #1e1e1e;
+    }
+
+    .btn-tool:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0px #1e1e1e;
+    }
+
+    .btn-primary {
+      background: #2b8a3e;
+      color: #ffffff;
+      border-color: #1e1e1e;
+    }
+
+    /* THE MAIN EXCALIDRAW CANVAS CARD */
+    #capture-card {
+      width: 100%;
+      max-width: 1240px;
+      background-color: var(--ex-bg);
+      background-image: radial-gradient(var(--ex-grid) 1.5px, transparent 1.5px);
+      background-size: 20px 20px;
+      border: 2.5px solid var(--ex-stroke);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 36px 40px;
+      box-shadow: 6px 8px 0px var(--ex-stroke);
+      position: relative;
+    }
+
+    /* HEADER */
+    .ex-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+
+    .ex-title {
+      font-family: 'Shantell Sans', 'Kalam', cursive;
+      font-size: 27px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--ex-text);
+      display: inline-block;
+      position: relative;
+    }
+
+    .ex-title::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -4px;
+      width: 100%;
+      height: 3px;
+      background: #6741d9;
+      border-radius: 2px;
+      transform: rotate(-0.5deg);
+    }
+
+    .ex-subtitle {
+      font-size: 16px;
+      color: var(--ex-text-muted);
+      margin-top: 8px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* TOP ROW: ACTOR -> E-COMMERCE -> KAFKA -> COURIER ENGINE */
+    .top-flow-grid {
+      display: grid;
+      grid-template-columns: 100px 34px 280px 40px 220px 40px 1fr;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    /* SKETCHY ROUGH BOXES */
+    .rough-box {
+      border: 2px solid var(--ex-stroke);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      background: #ffffff;
+      padding: 16px;
+      position: relative;
+      box-shadow: 2px 3px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .rough-box {
+      background: #1a1a1a;
+    }
+
+    .box-customer {
+      border-color: #6741d9;
+      background: var(--ex-purple-bg);
+      text-align: center;
+      padding: 18px 8px;
+      width: 90px;
+    }
+
+    .customer-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #6741d9;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 8px;
+      border: 2px solid var(--ex-stroke);
+    }
+
+    .box-ecom {
+      border-color: var(--ex-blue-border);
+      border-width: 2.2px;
+      padding: 16px 18px;
+    }
+
+    .box-kafka {
+      border-color: var(--ex-purple-border);
+      border-width: 2.2px;
+      padding: 16px 18px;
+      text-align: center;
+    }
+
+    .box-courier {
+      border-color: var(--ex-green-border);
+      border-width: 2.2px;
+      padding: 16px 18px;
+    }
+
+    .service-heading {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 16px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    .heading-blue { color: var(--ex-blue-text); }
+    .heading-purple { color: var(--ex-purple-text); }
+    .heading-green { color: var(--ex-green-text); }
+
+    /* INNER ECOMMERCE SUB-ELEMENTS */
+    .ecom-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .inner-rough-card {
+      border: 1.8px solid var(--ex-stroke);
+      border-radius: 255px 12px 225px 12px/12px 225px 12px 255px;
+      background: #fff;
+      padding: 10px 12px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 1px 2px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .inner-rough-card {
+      background: #252525;
+    }
+
+    .card-api {
+      border-color: var(--ex-blue-border);
+      width: 95px;
+    }
+
+    .card-db {
+      border-color: var(--ex-blue-border);
+      width: 105px;
+      position: relative;
+    }
+
+    .db-cylinder-icon {
+      width: 32px;
+      height: 38px;
+      margin: 0 auto 4px;
+    }
+
+    /* OUTBOX TABLE CARD */
+    .outbox-table-card {
+      border: 1.8px dashed var(--ex-blue-border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-family: 'Fira Code', monospace;
+      font-size: 10.5px;
+      background: rgba(25, 113, 194, 0.05);
+    }
+
+    .table-title {
+      font-weight: 800;
+      font-size: 11.5px;
+      color: var(--ex-blue-text);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      border-bottom: 1px solid rgba(25, 113, 194, 0.2);
+      padding-bottom: 3px;
+    }
+
+    .table-col-item {
+      color: var(--ex-text);
+      line-height: 1.5;
+    }
+
+    /* KAFKA TOPIC & EVENT CARD */
+    .kafka-icon-svg {
+      width: 38px;
+      height: 38px;
+      margin: 0 auto 6px;
+    }
+
+    .kafka-topic-name {
+      font-family: 'Fira Code', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--ex-purple-text);
+      margin-bottom: 14px;
+    }
+
+    .event-payload-card {
+      border: 1.8px dashed var(--ex-purple-border);
+      border-radius: 8px;
+      background: rgba(103, 65, 217, 0.05);
+      padding: 10px;
+      text-align: left;
+      font-family: 'Fira Code', monospace;
+      font-size: 9.5px;
+      line-height: 1.4;
+      color: var(--ex-text);
+    }
+
+    .event-tag-pill {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--ex-purple-text);
+      text-align: center;
+      margin-bottom: 4px;
+    }
+
+    /* COURIER LOGISTICS SUB-PIPELINE */
+    .courier-flow-column {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .courier-step-box {
+      border: 1.8px solid var(--ex-green-border);
+      border-radius: 255px 12px 225px 12px/12px 225px 12px 255px;
+      background: #fff;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      width: 100%;
+      max-width: 220px;
+      box-shadow: 1px 2px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .courier-step-box {
+      background: #252525;
+    }
+
+    /* INBOX CHECK BRANCH */
+    .inbox-split-row {
+      display: grid;
+      grid-template-columns: 180px 18px 120px;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .ack-drop-box {
+      border: 1.8px solid var(--ex-red-border);
+      border-radius: 8px;
+      background: var(--ex-red-bg);
+      color: var(--ex-red-text);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 6px;
+      text-align: center;
+    }
+
+    .inbox-db-mini {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 9.5px;
+      color: var(--ex-text-muted);
+      margin-top: 4px;
+    }
+
+    .courier-adapter-row {
+      display: grid;
+      grid-template-columns: 200px 18px 90px;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    /* CONNECTING SKETCHY ARROWS */
+    .arrow-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .arrow-step-badge {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #6741d9;
+      color: #fff;
+      font-size: 11px;
+      font-family: 'Shantell Sans', cursive;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 2px;
+      border: 1.5px solid var(--ex-stroke);
+    }
+
+    .badge-green { background: #2b8a3e; }
+    .badge-blue { background: #1971c2; }
+
+    .arrow-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.1;
+      margin-bottom: 2px;
+    }
+
+    .sketch-arrow-h {
+      width: 100%;
+      height: 18px;
+    }
+
+    .sketch-arrow-v {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* STEP 8: COURIER PARTNERS ROW */
+    .courier-partners-container {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 28px;
+      padding-right: 20px;
+    }
+
+    .partners-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 320px;
+    }
+
+    .partners-box {
+      border: 2px solid var(--ex-blue-border);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 10px 18px;
+      background: #ffffff;
+      box-shadow: 2px 3px 0px var(--ex-stroke);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      gap: 16px;
+      width: 100%;
+    }
+
+    body.dark-mode .partners-box {
+      background: #252525;
+    }
+
+    .partner-brand {
+      font-family: 'Shantell Sans', sans-serif;
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-shiprocket { color: #5f3dc4; }
+    .brand-delhivery { color: #c92a2a; text-transform: uppercase; font-weight: 900; }
+    .brand-ekart { color: #1971c2; }
+
+    .partners-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--ex-blue-text);
+      margin-top: 5px;
+    }
+
+    /* BOTTOM 3 PANELS: STEPS (LEFT) + BENEFITS (MID) + LEGEND (RIGHT) */
+    .bottom-panels-grid {
+      display: grid;
+      grid-template-columns: 1.35fr 1fr 0.9fr;
+      gap: 18px;
+    }
+
+    .panel-box {
+      border-radius: 12px;
+      padding: 16px 18px;
+    }
+
+    /* PANEL 1: STEPS EXPLANATION (Blue dotted) */
+    .panel-steps {
+      border: 2px dashed var(--ex-blue-border);
+      background: rgba(25, 113, 194, 0.03);
+    }
+
+    .step-list-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 11.5px;
+      margin-bottom: 7px;
+      line-height: 1.3;
+    }
+
+    .step-num-circle {
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      background: #6741d9;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* PANEL 2: KEY BENEFITS (Green dotted) */
+    .panel-benefits {
+      border: 2px dashed var(--ex-green-border);
+      background: rgba(43, 138, 62, 0.03);
+    }
+
+    .panel-title {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 14px;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+
+    .benefit-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      margin-bottom: 8px;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .check-icon {
+      color: #2b8a3e;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+
+    /* PANEL 3: LEGEND (Purple dotted) */
+    .panel-legend {
+      border: 2px dashed var(--ex-purple-border);
+      background: rgba(103, 65, 217, 0.03);
+      font-size: 11px;
+    }
+
+    .legend-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* FOOTER WATERMARK */
+    .ex-footer {
+      margin-top: 24px;
+      padding-top: 14px;
+      border-top: 1.5px dashed var(--ex-stroke);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--ex-text-muted);
+    }
+
+    .footer-author {
+      font-weight: 700;
+      color: var(--ex-text);
+      cursor: text;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px dashed transparent;
+    }
+
+    .footer-author:hover {
+      border-color: #6741d9;
+      background: rgba(103, 65, 217, 0.08);
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1e1e1e;
+      color: #fff;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 15px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.25s ease;
+      z-index: 1000;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 1024px) {
+      .top-flow-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .bottom-panels-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP ACTION TOOLBAR -->
+  <div class="action-bar">
+    <div class="action-left">
+      <span>✏️ Excalidraw Architecture Studio</span>
+      <span class="badge-day">Day 4 / 30</span>
+    </div>
+
+    <div class="action-right">
+      <a href="index.html" class="btn-tool" style="text-decoration:none;">
+        🏢 Dark Modern Studio
+      </a>
+      <button class="btn-tool" onclick="toggleTheme()" id="btn-theme">
+        🌓 Dark / Light
+      </button>
+      <button class="btn-tool" onclick="copyLinkedInCaption()">
+        📋 Copy Day 4 Caption
+      </button>
+      <button class="btn-tool btn-primary" onclick="exportExcalidrawPNG()">
+        📸 Download PNG (2x Retina)
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN SCREENSHOT TARGET (EXCALIDRAW CANVAS) -->
+  <div id="capture-card">
+
+    <!-- TITLE & SUBTITLE -->
+    <div class="ex-header">
+      <div class="ex-title">Day 4 – Order to Courier Logistics Flow (Decoupled Architecture)</div>
+      <div class="ex-subtitle">Reliable • Scalable • Resilient</div>
+    </div>
+
+    <!-- MAIN FLOW ROW: CUSTOMER ➔ E-COM SERVICE ➔ KAFKA CLUSTER ➔ COURIER LOGISTICS ENGINE -->
+    <div class="top-flow-grid">
+
+      <!-- 1. CUSTOMER -->
+      <div class="rough-box box-customer">
+        <div class="customer-avatar">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div style="font-weight:700; font-size:14px;">Customer</div>
+      </div>
+
+      <!-- ARROW 1: Places Order -->
+      <div class="arrow-container">
+        <div class="arrow-step-badge">1</div>
+        <div class="arrow-label">Places<br>Order</div>
+        <svg class="sketch-arrow-h" viewBox="0 0 34 16">
+          <path d="M 2 8 Q 16 7 28 8" fill="none" stroke="#6741d9" stroke-width="2" stroke-linecap="round"/>
+          <polygon points="26,4 32,8 26,12" fill="#6741d9"/>
+        </svg>
+      </div>
+
+      <!-- 2. E-COMMERCE SERVICE -->
+      <div class="rough-box box-ecom">
+        <div class="service-heading heading-blue">E-Commerce Service</div>
+
+        <div class="ecom-row">
+          <!-- Checkout API -->
+          <div class="inner-rough-card card-api">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2" style="margin:0 auto 3px;">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+            <div>Checkout API</div>
+          </div>
+
+          <!-- Arrow 2: Write Order + Outbox in same DB TX -->
+          <div class="arrow-container" style="width:70px;">
+            <div class="arrow-step-badge badge-blue">2</div>
+            <div class="arrow-label" style="font-size:9.5px; color:#1864ab;">Write Order<br>+ Outbox in<br>same DB TX</div>
+            <svg class="sketch-arrow-h" viewBox="0 0 30 14" style="height:12px;">
+              <path d="M 2 7 Q 14 6 24 7" fill="none" stroke="#1971c2" stroke-width="1.8"/>
+              <polygon points="22,4 28,7 22,10" fill="#1971c2"/>
+            </svg>
+          </div>
+
+          <!-- PostgreSQL (Order DB) -->
+          <div class="inner-rough-card card-db">
+            <!-- Hand-drawn style cylinder -->
+            <svg class="db-cylinder-icon" viewBox="0 0 32 38" fill="none" stroke="#1971c2" stroke-width="2">
+              <ellipse cx="16" cy="8" rx="14" ry="5" fill="#e7f5ff"/>
+              <path d="M 2 8 L 2 30 C 2 35 30 35 30 30 L 30 8" fill="#e7f5ff"/>
+              <ellipse cx="16" cy="8" rx="14" ry="5"/>
+              <path d="M 2 18 C 2 23 30 23 30 18"/>
+              <path d="M 2 30 C 2 35 30 35 30 30"/>
+            </svg>
+            <div style="font-size:11px; line-height:1.2;">PostgreSQL<br><span style="font-size:9.5px; color:#495057;">(Order DB)</span></div>
+          </div>
+        </div>
+
+        <!-- Outbox Table Card -->
+        <div class="outbox-table-card">
+          <div class="table-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg>
+            <span>Outbox Table</span>
+          </div>
+          <div class="table-col-item">• eventId (PK)</div>
+          <div class="table-col-item">• aggregateId (orderId)</div>
+          <div class="table-col-item">• eventType</div>
+          <div class="table-col-item">• payload (JSON)</div>
+          <div class="table-col-item">• createdAt</div>
+          <div class="table-col-item">• processedAt (nullable)</div>
+        </div>
+      </div>
+
+      <!-- ARROW 3: Outbox Poller -->
+      <div class="arrow-container">
+        <div class="arrow-step-badge badge-green">3</div>
+        <div class="arrow-label" style="color:#2b8a3e;">Outbox<br>Poller</div>
+        <svg class="sketch-arrow-h" viewBox="0 0 40 16">
+          <path d="M 2 8 Q 18 7 34 8" fill="none" stroke="#2b8a3e" stroke-width="2"/>
+          <polygon points="32,4 38,8 32,12" fill="#2b8a3e"/>
+        </svg>
+      </div>
+
+      <!-- 3. KAFKA CLUSTER -->
+      <div class="rough-box box-kafka">
+        <div class="service-heading heading-purple">Kafka Cluster</div>
+
+        <!-- Kafka Cluster Icon -->
+        <svg class="kafka-icon-svg" viewBox="0 0 38 38" fill="none" stroke="#6741d9" stroke-width="2.2">
+          <circle cx="19" cy="19" r="4" fill="#6741d9"/>
+          <circle cx="10" cy="9" r="3" fill="#f3f0ff"/>
+          <circle cx="28" cy="9" r="3" fill="#f3f0ff"/>
+          <circle cx="10" cy="29" r="3" fill="#f3f0ff"/>
+          <circle cx="28" cy="29" r="3" fill="#f3f0ff"/>
+          <path d="M12 11 L17 17 M26 11 L21 17 M12 27 L17 21 M26 27 L21 21"/>
+        </svg>
+
+        <div class="kafka-topic-name">
+          <span style="font-size:10px; color:#64748b;">Topic</span><br>
+          courier.shipment.events
+        </div>
+
+        <!-- Event JSON Card -->
+        <div class="event-payload-card">
+          <div class="event-tag-pill">Event</div>
+          <div>{</div>
+          <div style="padding-left:10px;">"eventId": "uuid-123",</div>
+          <div style="padding-left:10px;">"orderId": "ORD-456",</div>
+          <div style="padding-left:10px;">"eventType": "SHIPMENT_CREATED",</div>
+          <div style="padding-left:10px;">"timestamp": "2025-05-20T10:15:30Z"</div>
+          <div>}</div>
+        </div>
+      </div>
+
+      <!-- ARROW 4: Consume Events -->
+      <div class="arrow-container">
+        <div class="arrow-step-badge badge-green">4</div>
+        <div class="arrow-label" style="color:#2b8a3e;">Consume<br>Events</div>
+        <svg class="sketch-arrow-h" viewBox="0 0 40 16">
+          <path d="M 2 8 Q 18 7 34 8" fill="none" stroke="#2b8a3e" stroke-width="2"/>
+          <polygon points="32,4 38,8 32,12" fill="#2b8a3e"/>
+        </svg>
+      </div>
+
+      <!-- 4. COURIER LOGISTICS ENGINE -->
+      <div class="rough-box box-courier">
+        <div class="service-heading heading-green">Courier Logistics Engine</div>
+
+        <div class="courier-flow-column">
+          <!-- Step: Consumer -->
+          <div class="courier-step-box">
+            Consumer<br><span style="font-size:10px; font-weight:normal; color:#495057;">(Shipment Event Handler)</span>
+          </div>
+
+          <!-- Arrow down -->
+          <svg class="sketch-arrow-v" viewBox="0 0 16 20">
+            <path d="M 8 2 L 8 16" fill="none" stroke="#2b8a3e" stroke-width="1.8"/>
+            <polygon points="5,14 8,19 11,14" fill="#2b8a3e"/>
+          </svg>
+
+          <!-- Step 5: Inbox Check & Split -->
+          <div class="inbox-split-row">
+            <div class="courier-step-box" style="position:relative;">
+              <span class="step-num-circle" style="position:absolute; left:-8px; top:50%; transform:translateY(-50%); background:#2b8a3e;">5</span>
+              Inbox Check<br><span style="font-size:10px; font-family:'Fira Code'; color:#2b8a3e;">(KafkaProcessedEvent)</span>
+            </div>
+
+            <!-- Red Dashed Arrow to Drop -->
+            <svg viewBox="0 0 24 16" style="width:24px; height:16px;">
+              <path d="M 2 8 L 18 8" fill="none" stroke="#c92a2a" stroke-width="1.8" stroke-dasharray="3,3"/>
+              <polygon points="16,5 22,8 16,11" fill="#c92a2a"/>
+            </svg>
+
+            <!-- Ack & Drop Box + Inbox Table -->
+            <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
+              <div class="ack-drop-box">
+                Ack & Drop<br><span style="font-size:9px;">(No Processing)</span>
+              </div>
+              <div class="inbox-db-mini">
+                <svg width="22" height="22" viewBox="0 0 32 32" fill="none" stroke="#2b8a3e" stroke-width="2">
+                  <ellipse cx="16" cy="7" rx="12" ry="4" fill="#ebfbee"/>
+                  <path d="M 4 7 L 4 23 C 4 27 28 27 28 23 L 28 7" fill="#ebfbee"/>
+                  <ellipse cx="16" cy="7" rx="12" ry="4"/>
+                  <path d="M 4 23 C 4 27 28 27 28 23"/>
+                </svg>
+                <span>Inbox Table</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Arrow down: Valid & New Event -->
+          <div style="display:flex; align-items:center; gap:4px; font-size:10px; color:#2b8a3e; font-weight:700;">
+            <svg class="sketch-arrow-v" viewBox="0 0 16 20">
+              <path d="M 8 2 L 8 16" fill="none" stroke="#2b8a3e" stroke-width="1.8"/>
+              <polygon points="5,14 8,19 11,14" fill="#2b8a3e"/>
+            </svg>
+            <span>Valid & New Event</span>
+          </div>
+
+          <!-- Step 6: Domain State Machine -->
+          <div class="courier-step-box" style="position:relative; max-width:260px;">
+            <span class="step-num-circle" style="position:absolute; left:-8px; top:50%; transform:translateY(-50%); background:#2b8a3e;">6</span>
+            Domain State Machine<br><span style="font-size:10px; color:#495057;">(Validates Transitions)</span>
+          </div>
+
+          <!-- Arrow down -->
+          <svg class="sketch-arrow-v" viewBox="0 0 16 20">
+            <path d="M 8 2 L 8 16" fill="none" stroke="#2b8a3e" stroke-width="1.8"/>
+            <polygon points="5,14 8,19 11,14" fill="#2b8a3e"/>
+          </svg>
+
+          <!-- Step 7: Courier Adapter & Shipment DB -->
+          <div class="courier-adapter-row">
+            <div class="courier-step-box" style="position:relative;">
+              <span class="step-num-circle" style="position:absolute; left:-8px; top:50%; transform:translateY(-50%); background:#2b8a3e;">7</span>
+              Courier Adapter<br><span style="font-size:9.5px; color:#495057;">(Shiprocket / Delhivery / Other APIs)</span>
+            </div>
+
+            <!-- Green dashed arrow to Shipment DB -->
+            <svg viewBox="0 0 24 16" style="width:24px; height:16px;">
+              <path d="M 2 8 L 18 8" fill="none" stroke="#2b8a3e" stroke-width="1.8" stroke-dasharray="3,3"/>
+              <polygon points="16,5 22,8 16,11" fill="#2b8a3e"/>
+            </svg>
+
+            <!-- Shipment DB cylinder -->
+            <div style="text-align:center; font-size:9.5px; color:#2b8a3e;">
+              <svg width="24" height="24" viewBox="0 0 32 32" fill="none" stroke="#2b8a3e" stroke-width="2" style="margin:0 auto;">
+                <ellipse cx="16" cy="7" rx="12" ry="4" fill="#ebfbee"/>
+                <path d="M 4 7 L 4 23 C 4 27 28 27 28 23 L 28 7" fill="#ebfbee"/>
+                <ellipse cx="16" cy="7" rx="12" ry="4"/>
+                <path d="M 4 23 C 4 27 28 27 28 23"/>
+              </svg>
+              <span>Shipment DB</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- STEP 8 CONNECTOR & COURIER PARTNERS (BOTTOM RIGHT) -->
+    <div class="courier-partners-container">
+      <div class="partners-wrapper">
+        <!-- Arrow 8: Create / Update Shipment -->
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+          <span class="step-num-circle" style="background:#2b8a3e;">8</span>
+          <span style="font-size:11.5px; font-weight:700;">Create / Update Shipment, Get AWB, Track Status</span>
+        </div>
+
+        <svg class="sketch-arrow-v" viewBox="0 0 16 22" style="height:22px; margin-bottom:6px;">
+          <path d="M 8 2 L 8 18" fill="none" stroke="#2b8a3e" stroke-width="2"/>
+          <polygon points="5,15 8,21 11,15" fill="#2b8a3e"/>
+        </svg>
+
+        <!-- Partners Box -->
+        <div class="partners-box">
+          <div class="partner-brand brand-shiprocket">🚀 Shiprocket</div>
+          <div class="partner-brand brand-delhivery">DELHIVERY</div>
+          <div class="partner-brand brand-ekart">ekart</div>
+        </div>
+        <div class="partners-label">Courier Partners</div>
+      </div>
+    </div>
+
+    <!-- BOTTOM 3 PANELS -->
+    <div class="bottom-panels-grid">
+
+      <!-- PANEL 1: NUMBERED STEP EXPLANATIONS (1 to 8) -->
+      <div class="panel-box panel-steps">
+        <div class="step-list-item">
+          <div class="step-num-circle">1</div>
+          <div>Customer places an order on the platform.</div>
+        </div>
+        <div class="step-list-item">
+          <div class="step-num-circle">2</div>
+          <div>Order and shipment intent are written to PostgreSQL (Outbox Pattern) in the same transaction.</div>
+        </div>
+        <div class="step-list-item">
+          <div class="step-num-circle">3</div>
+          <div>Outbox Poller reads unprocessed events and publishes them to Kafka.</div>
+        </div>
+        <div class="step-list-item">
+          <div class="step-num-circle">4</div>
+          <div>Courier Logistics Engine consumes events from Kafka topic.</div>
+        </div>
+        <div class="step-list-item">
+          <div class="step-num-circle">5</div>
+          <div>Inbox pattern ensures idempotency (duplicate events are acknowledged and dropped).</div>
+        </div>
+        <div class="step-list-item">
+          <div class="step-num-circle">6</div>
+          <div>Domain State Machine validates business rules and allows only forward state transitions.</div>
+        </div>
+        <div class="step-list-item">
+          <div class="step-num-circle">7</div>
+          <div>Courier Adapter communicates with 3rd-party courier APIs asynchronously.</div>
+        </div>
+        <div class="step-list-item">
+          <div class="step-num-circle">8</div>
+          <div>Courier partner processes the request and returns AWB / updates which come back as webhooks/events to the system.</div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: KEY BENEFITS -->
+      <div class="panel-box panel-benefits">
+        <div class="panel-title" style="color:#2b8a3e;">Key Benefits</div>
+        <div class="benefit-item">
+          <span class="check-icon">✔</span>
+          <span>No latency impact on Checkout</span>
+        </div>
+        <div class="benefit-item">
+          <span class="check-icon">✔</span>
+          <span>No dual-write / partial failure issues</span>
+        </div>
+        <div class="benefit-item">
+          <span class="check-icon">✔</span>
+          <span>At-least-once delivery with idempotency</span>
+        </div>
+        <div class="benefit-item">
+          <span class="check-icon">✔</span>
+          <span>Out-of-order webhooks handled via state machine</span>
+        </div>
+        <div class="benefit-item">
+          <span class="check-icon">✔</span>
+          <span>Scalable &amp; Resilient Architecture</span>
+        </div>
+      </div>
+
+      <!-- PANEL 3: LEGEND -->
+      <div class="panel-box panel-legend">
+        <div class="panel-title" style="color:#6741d9;">Legend</div>
+        <div class="legend-grid">
+          <div class="legend-item">
+            <span>──▶</span>
+            <span>Synchronous Flow</span>
+          </div>
+          <div class="legend-item">
+            <span>▢</span>
+            <span>Service / Component</span>
+          </div>
+          <div class="legend-item">
+            <span>- - ▶</span>
+            <span>Asynchronous Flow</span>
+          </div>
+          <div class="legend-item">
+            <span>◌</span>
+            <span>Table / Store</span>
+          </div>
+          <div class="legend-item">
+            <span>🛢️</span>
+            <span>Database</span>
+          </div>
+          <div class="legend-item">
+            <span class="step-num-circle" style="width:14px; height:14px; font-size:9px; display:inline-flex;">2</span>
+            <span>Step Number</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FOOTER WATERMARK -->
+    <div class="ex-footer">
+      <div>
+        <span style="font-size:12px; color:var(--ex-text-muted);">SYSTEM DESIGN SERIES:</span>
+        <span class="footer-author" contenteditable="true" title="Click to edit your handle!">By Mrityunjay Kumar | Day 4/30 E-Commerce &amp; Logistics Flow</span>
+      </div>
+
+      <div style="font-weight:700; color:var(--ex-text-muted);">
+        <span>Made with 💜 for LinkedIn</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast">Downloaded!</div>
+
+  <script>
+    // Toggle Light / Dark mode
+    function toggleTheme() {
+      document.body.classList.toggle('dark-mode');
+      const isDark = document.body.classList.contains('dark-mode');
+      showToast(isDark ? '🌙 Dark Mode Activated' : '☀️ Light Mode Activated');
+    }
+
+    // High-Resolution PNG Exporter
+    function exportExcalidrawPNG() {
+      const card = document.getElementById('capture-card');
+      showToast('📸 Rendering 2x Retina Excalidraw PNG...');
+
+      window.scrollTo(0, 0);
+
+      html2canvas(card, {
+        scale: 2.5, // Crisp 2.5x resolution for viral clarity on LinkedIn
+        backgroundColor: document.body.classList.contains('dark-mode') ? '#121212' : '#ffffff',
+        useCORS: true,
+        logging: false
+      }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'Day4-Order-to-Courier-Logistics-Flow-Excalidraw.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('✅ Downloaded! Ready to post on LinkedIn.');
+      }).catch(err => {
+        console.error(err);
+        showToast('❌ Export error. Use Win + Shift + S to screenshot.');
+      });
+    }
+
+    // Copy Day 4 LinkedIn Caption
+    function copyLinkedInCaption() {
+      const caption = `Day 4 / 30: Order to Courier Logistics Flow (Decoupled Architecture) 🚀
+
+How do high-volume e-commerce giants decouple checkout from courier partner APIs like Shiprocket, Delhivery & Ekart?
+
+Here is the step-by-step breakdown of this reliable, scalable & resilient event-driven architecture:
+
+1️⃣ Step 1: Customer places an order on the platform.
+2️⃣ Step 2: Order & Shipment Intent are written to PostgreSQL (Outbox Pattern) in the SAME atomic transaction. No dual-write risk!
+3️⃣ Step 3: Outbox Poller reads unprocessed events and reliably publishes them to Apache Kafka.
+4️⃣ Step 4: Courier Logistics Engine consumes events from 'courier.shipment.events'.
+5️⃣ Step 5: Inbox Pattern checks 'KafkaProcessedEvent' table. Duplicate events are acknowledged & dropped immediately (Idempotency guarantee).
+6️⃣ Step 6: Domain State Machine validates business rules and only permits forward state transitions.
+7️⃣ Step 7: Courier Adapter communicates with 3rd-party carrier APIs asynchronously and persists state in Shipment DB.
+8️⃣ Step 8: Courier partner assigns an AWB number and pushes tracking updates back via webhooks.
+
+✨ Key Benefits:
+✔ Zero latency impact on customer checkout
+✔ No partial failures or dual-write inconsistency
+✔ At-least-once delivery combined with idempotent consumer
+✔ Out-of-order carrier webhooks handled gracefully via state machine
+✔ 100% scalable & fault-tolerant architecture
+
+What's your preferred approach for handling 3rd-party courier webhooks? Let me know in the comments! 👇
+
+#SystemDesign #SoftwareArchitecture #Microservices #Kafka #PostgreSQL #OutboxPattern #Logistics #Backend #Engineering #WebDevelopment`;
+
+      navigator.clipboard.writeText(caption).then(() => {
+        showToast('📋 Day 4 LinkedIn Caption copied to clipboard!');
+      }).catch(() => {
+        showToast('Failed to copy. Please copy manually.');
+      });
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.classList.add('show');
+      setTimeout(() => {
+        t.classList.remove('show');
+      }, 3500);
+    }
+  </script>
+</body>
+</html>
