@@ -124,17 +124,20 @@ This repository includes a single-file, interactive studio (`index.html`) ready 
 
 ### How to Open:
 ```bash
-# Windows
+# Windows (cmd or PowerShell)
 start index.html
 start day4-excalidraw.html
+start webhook-reliability-excalidraw.html
 
 # macOS
 open index.html
 open day4-excalidraw.html
+open webhook-reliability-excalidraw.html
 
 # Linux
 xdg-open index.html
 xdg-open day4-excalidraw.html
+xdg-open webhook-reliability-excalidraw.html
 ```
 
 ---
@@ -146,6 +149,21 @@ Includes an authentic hand-drawn Excalidraw aesthetic figure designed specifical
 - Light / Dark Excalidraw theme toggle.
 - 2.5x Retina PNG export button.
 - 1-click Day 4 LinkedIn caption copy.
+
+---
+
+## ⚡ Webhook Reliability Architecture (`webhook-reliability-excalidraw.html`)
+An authentic hand-drawn Excalidraw architectural diagram based on real-world fintech and logistics webhook ingestion systems:
+- **Core 6-Stage Webhook Pipeline**:
+  1. **Verify Signature**: HMAC-SHA256 hash matching, timing-attack safe comparison, timestamp skew checks.
+  2. **Validate & Parse**: JSON schema validation, payload sanitization, strict type checks.
+  3. **Idempotency & Deduplication**: Redis distributed locks + PostgreSQL unique event ID checks to prevent duplicate processing on retries.
+  4. **State Machine & Event Reconciliation**: Strict monotonic state transitions (e.g. prevent `DELIVERED` ➔ `OUT_FOR_DELIVERY` out-of-order race conditions).
+  5. **Transactional Update**: Atomic DB commit with Transactional Outbox pattern (`webhook_events` + domain entities).
+  6. **Publish to Broker & 200 OK ACK**: Asynchronous Kafka event dispatch and fast sub-250ms `200 OK` response to third-party providers.
+- **7 Reliability Pillars**: Cryptographic verification, Deduplication, Fast ACK, Monotonic State Machines, Transactional Outbox, Dead Letter Queue (DLQ), and Audit Logging.
+- **Provider & Consumer Ecosystem**: Ingestion from Payment Gateways (Razorpay, Stripe) & Logistics (Shiprocket, Delhivery), consuming across Order, Fulfillment, and Analytics microservices.
+- **Interactive Tools**: 🌓 Dark/Light Mode, 📸 2.5x Retina PNG Export, and 📋 1-Click LinkedIn Caption Copy.
 
 ---
 

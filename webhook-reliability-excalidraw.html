@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Webhook Reliability Architecture (Excalidraw Style) | LinkedIn System Design</title>
+  <!-- Google Fonts: Excalidraw Hand-drawn typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fira+Code:wght@500;600;700&family=Kalam:wght@400;700&family=Patrick+Hand&family=Shantell+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- html2canvas for High-Res PNG export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --ex-bg: #ffffff;
+      --ex-grid: rgba(0, 0, 0, 0.05);
+      --ex-text: #1e1e1e;
+      --ex-text-muted: #495057;
+      --ex-stroke: #1e1e1e;
+      
+      --c-blue: #1971c2;
+      --c-blue-bg: #e7f5ff;
+      --c-blue-border: #1864ab;
+      
+      --c-purple: #6741d9;
+      --c-purple-bg: #f3f0ff;
+      --c-purple-border: #5f3dc4;
+      
+      --c-green: #2b8a3e;
+      --c-green-bg: #ebfbee;
+      --c-green-border: #237032;
+      
+      --c-orange: #d9480f;
+      --c-orange-bg: #fff4e6;
+      --c-orange-border: #c93b05;
+      
+      --c-cyan: #0c8599;
+      --c-cyan-bg: #e3fafc;
+      --c-cyan-border: #0b7285;
+      
+      --c-pink: #c2255c;
+      --c-pink-bg: #fff0f6;
+      --c-pink-border: #a61e4d;
+
+      --c-navy: #183153;
+      --c-navy-bg: #e8f0fe;
+    }
+
+    body.dark-mode {
+      --ex-bg: #12141a;
+      --ex-grid: rgba(255, 255, 255, 0.06);
+      --ex-text: #f8f9fa;
+      --ex-text-muted: #ced4da;
+      --ex-stroke: #e9ecef;
+      
+      --c-blue: #4dabf7;
+      --c-blue-bg: rgba(25, 113, 194, 0.22);
+      --c-blue-border: #74c0fc;
+      
+      --c-purple: #9775fa;
+      --c-purple-bg: rgba(103, 65, 217, 0.22);
+      --c-purple-border: #b197fc;
+      
+      --c-green: #51cf66;
+      --c-green-bg: rgba(43, 138, 62, 0.22);
+      --c-green-border: #69db7c;
+      
+      --c-orange: #ff922b;
+      --c-orange-bg: rgba(217, 72, 15, 0.22);
+      --c-orange-border: #ffa94d;
+      
+      --c-cyan: #3bc9db;
+      --c-cyan-bg: rgba(12, 133, 153, 0.22);
+      --c-cyan-border: #66d9e8;
+      
+      --c-pink: #f783ac;
+      --c-pink-bg: rgba(194, 37, 92, 0.22);
+      --c-pink-border: #faa2c1;
+
+      --c-navy: #74c0fc;
+      --c-navy-bg: rgba(24, 49, 83, 0.3);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #e9ecef;
+      color: var(--ex-text);
+      font-family: 'Patrick Hand', 'Kalam', 'Caveat', cursive, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    /* TOP ACTION TOOLBAR */
+    .toolbar-bar {
+      width: 100%;
+      max-width: 1300px;
+      background: #ffffff;
+      border: 2px solid #1e1e1e;
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 10px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 3px 3px 0px #1e1e1e;
+    }
+
+    body.dark-mode .toolbar-bar {
+      background: #1e1e1e;
+      border-color: #e9ecef;
+      box-shadow: 3px 3px 0px #e9ecef;
+      color: #fff;
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .badge-series {
+      background: #1971c2;
+      color: #fff;
+      font-size: 13px;
+      padding: 2px 10px;
+      border-radius: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-action {
+      background: #ffffff;
+      border: 2px solid #1e1e1e;
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 6px 14px;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 15px;
+      font-weight: 700;
+      color: #1e1e1e;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 2px 2px 0px #1e1e1e;
+      transition: all 0.15s;
+    }
+
+    .btn-action:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0px #1e1e1e;
+    }
+
+    .btn-primary {
+      background: #1971c2;
+      color: #ffffff;
+      border-color: #1e1e1e;
+    }
+
+    /* THE MAIN EXCALIDRAW CANVAS */
+    #capture-card {
+      width: 100%;
+      max-width: 1300px;
+      background-color: var(--ex-bg);
+      background-image: radial-gradient(var(--ex-grid) 1.5px, transparent 1.5px);
+      background-size: 20px 20px;
+      border: 2.5px solid var(--ex-stroke);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 32px 36px;
+      box-shadow: 6px 8px 0px var(--ex-stroke);
+      position: relative;
+    }
+
+    /* HEADER BANNER */
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+      gap: 20px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .logo-badge {
+      width: 44px;
+      height: 44px;
+      border: 2.2px solid var(--ex-stroke);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #e7f5ff;
+      box-shadow: 2px 2px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .logo-badge {
+      background: #1864ab;
+    }
+
+    .title-group h1 {
+      font-family: 'Shantell Sans', 'Kalam', cursive;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      color: var(--ex-text);
+      line-height: 1.1;
+    }
+
+    .title-group p {
+      font-size: 15px;
+      color: var(--ex-text-muted);
+      margin-top: 4px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .header-callout-box {
+      border: 2px solid var(--c-blue-border);
+      border-radius: 255px 12px 225px 12px/12px 225px 12px 255px;
+      background: var(--c-blue-bg);
+      padding: 10px 16px;
+      max-width: 440px;
+      font-size: 12.5px;
+      line-height: 1.35;
+      box-shadow: 2px 2px 0px var(--ex-stroke);
+    }
+
+    .callout-bold {
+      font-weight: 800;
+      color: var(--c-blue);
+      margin-bottom: 2px;
+    }
+
+    /* MAIN ARCHITECTURE SECTION (3 COLUMNS) */
+    .arch-main-grid {
+      display: grid;
+      grid-template-columns: 200px 30px 1fr 30px 200px;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+
+    .arrow-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .arrow-label {
+      font-size: 10.5px;
+      font-family: 'Fira Code', monospace;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 3px;
+    }
+
+    /* ROUGH BOX BASE */
+    .rough-box {
+      border: 2.2px solid var(--ex-stroke);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      background: #ffffff;
+      padding: 16px;
+      position: relative;
+      box-shadow: 3px 3px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .rough-box {
+      background: #181b22;
+    }
+
+    .side-title {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 14px;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 12px;
+      color: var(--ex-text);
+    }
+
+    .side-sub {
+      font-size: 11px;
+      color: var(--ex-text-muted);
+      text-align: center;
+      margin-top: -10px;
+      margin-bottom: 12px;
+    }
+
+    /* PROVIDER CARDS */
+    .provider-card {
+      border: 1.8px solid var(--c-blue-border);
+      border-radius: 255px 12px 225px 12px/12px 225px 12px 255px;
+      background: var(--c-blue-bg);
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      box-shadow: 1.5px 2px 0px var(--ex-stroke);
+    }
+
+    .provider-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      font-weight: 800;
+      color: var(--c-blue);
+      margin-bottom: 6px;
+    }
+
+    .bullet-list {
+      font-size: 11px;
+      line-height: 1.4;
+      padding-left: 2px;
+    }
+
+    .provider-subtext {
+      font-size: 9.5px;
+      color: var(--ex-text-muted);
+      font-style: italic;
+      margin-top: 5px;
+    }
+
+    /* CENTER PIPELINE CONTAINER */
+    .pipeline-container {
+      border: 2.2px solid var(--c-blue-border);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      background: #ffffff;
+      padding: 18px 20px;
+      box-shadow: 3px 4px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .pipeline-container {
+      background: #151821;
+    }
+
+    .pipeline-heading {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--ex-text);
+      margin-bottom: 14px;
+    }
+
+    /* 6 PIPELINE STEPS GRID */
+    .steps-row-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .step-card {
+      border: 1.8px solid var(--ex-stroke);
+      border-radius: 255px 12px 225px 12px/12px 225px 12px 255px;
+      padding: 10px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      box-shadow: 1.5px 2px 0px var(--ex-stroke);
+      position: relative;
+    }
+
+    .step-card.step-1 { border-color: var(--c-blue-border); background: var(--c-blue-bg); }
+    .step-card.step-2 { border-color: var(--c-purple-border); background: var(--c-purple-bg); }
+    .step-card.step-3 { border-color: var(--c-green-border); background: var(--c-green-bg); }
+    .step-card.step-4 { border-color: var(--c-orange-border); background: var(--c-orange-bg); }
+    .step-card.step-5 { border-color: var(--c-cyan-border); background: var(--c-cyan-bg); }
+    .step-card.step-6 { border-color: var(--c-pink-border); background: var(--c-pink-bg); }
+
+    .step-badge {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      color: #fff;
+      font-family: 'Shantell Sans', cursive;
+      font-weight: 800;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 6px;
+      border: 1.5px solid var(--ex-stroke);
+    }
+
+    .step-1 .step-badge { background: var(--c-blue); }
+    .step-2 .step-badge { background: var(--c-purple); }
+    .step-3 .step-badge { background: var(--c-green); }
+    .step-4 .step-badge { background: var(--c-orange); }
+    .step-5 .step-badge { background: var(--c-cyan); }
+    .step-6 .step-badge { background: var(--c-pink); }
+
+    .step-icon-svg {
+      width: 22px;
+      height: 22px;
+      margin-bottom: 6px;
+    }
+
+    .step-name {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 6px;
+      line-height: 1.2;
+    }
+
+    .step-items {
+      font-size: 9.5px;
+      line-height: 1.35;
+      text-align: left;
+      width: 100%;
+      padding-left: 2px;
+    }
+
+    /* MIDDLE SUB-SECTION: MESSAGE QUEUE & OUTBOX */
+    .queue-outbox-box {
+      border: 1.8px dashed var(--c-purple-border);
+      border-radius: 12px;
+      background: rgba(103, 65, 217, 0.04);
+      padding: 12px 16px;
+      margin-bottom: 14px;
+    }
+
+    .queue-title {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+      color: var(--c-purple);
+      margin-bottom: 10px;
+    }
+
+    .queue-row {
+      display: grid;
+      grid-template-columns: 1fr 30px 1fr 30px 1fr;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .q-item-card {
+      border: 1.5px solid var(--ex-stroke);
+      border-radius: 8px;
+      background: #ffffff;
+      padding: 8px 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 1px 2px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .q-item-card {
+      background: #1f232e;
+    }
+
+    .q-item-title {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 11.5px;
+      font-weight: 800;
+      margin-bottom: 3px;
+    }
+
+    .q-item-bullets {
+      font-size: 9px;
+      line-height: 1.3;
+      color: var(--ex-text-muted);
+    }
+
+    /* INFRASTRUCTURE LAYER */
+    .infra-layer {
+      border-top: 1.5px dashed rgba(0, 0, 0, 0.15);
+      padding-top: 10px;
+    }
+
+    body.dark-mode .infra-layer {
+      border-top-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .infra-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--c-blue);
+      margin-bottom: 6px;
+    }
+
+    .infra-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .infra-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    /* RIGHT COLUMN: EVENT CONSUMERS */
+    .consumer-card {
+      border: 1.8px solid var(--c-green-border);
+      border-radius: 255px 12px 225px 12px/12px 225px 12px 255px;
+      background: var(--c-green-bg);
+      padding: 10px 12px;
+      margin-bottom: 12px;
+      box-shadow: 1.5px 2px 0px var(--ex-stroke);
+    }
+
+    .consumer-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      font-weight: 800;
+      color: var(--c-green);
+      margin-bottom: 6px;
+    }
+
+    /* BOTTOM PANELS */
+    .bottom-layout-grid {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    /* KEY RELIABILITY PRINCIPLES (7 PILLARS) */
+    .principles-box {
+      border: 2px solid var(--c-blue-border);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 14px 18px;
+      background: #ffffff;
+      box-shadow: 3px 3px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .principles-box {
+      background: #181b22;
+    }
+
+    .principles-title {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 14.5px;
+      font-weight: 800;
+      margin-bottom: 12px;
+      color: var(--ex-text);
+    }
+
+    .pillars-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+
+    .pillar-card {
+      border: 1.5px solid var(--ex-stroke);
+      border-radius: 8px;
+      padding: 8px 6px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-size: 9.5px;
+      line-height: 1.25;
+      background: #fdfdfd;
+      box-shadow: 1px 1.5px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .pillar-card {
+      background: #20242e;
+    }
+
+    .pillar-icon-svg {
+      width: 22px;
+      height: 22px;
+      margin-bottom: 5px;
+    }
+
+    .pillar-title {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 10px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .p-green { color: var(--c-green); }
+    .p-purple { color: var(--c-purple); }
+    .p-blue { color: var(--c-blue); }
+    .p-orange { color: var(--c-orange); }
+    .p-cyan { color: var(--c-cyan); }
+    .p-pink { color: var(--c-pink); }
+    .p-navy { color: var(--c-navy); }
+
+    /* THE BIG PICTURE CALLOUT BOX */
+    .big-picture-box {
+      border: 2px dashed var(--c-green-border);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      background: var(--c-green-bg);
+      padding: 16px 20px;
+      box-shadow: 2.5px 3px 0px var(--ex-stroke);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .big-picture-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Shantell Sans', cursive;
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--c-green);
+      margin-bottom: 6px;
+    }
+
+    .big-picture-desc {
+      font-size: 11.5px;
+      line-height: 1.35;
+      color: var(--ex-text);
+      margin-bottom: 8px;
+    }
+
+    .flow-pipeline-text {
+      font-family: 'Fira Code', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--c-blue);
+      margin-bottom: 10px;
+      line-height: 1.3;
+    }
+
+    .highlight-pill {
+      background: #ffffff;
+      border: 1.5px solid var(--c-green-border);
+      border-radius: 20px;
+      padding: 6px 12px;
+      text-align: center;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: var(--c-green);
+      box-shadow: 1px 2px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .highlight-pill {
+      background: #1e1e1e;
+    }
+
+    /* FOOTER WATERMARK */
+    .ex-footer {
+      margin-top: 24px;
+      padding-top: 14px;
+      border-top: 1.5px dashed var(--ex-stroke);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--ex-text-muted);
+    }
+
+    .footer-author {
+      font-weight: 700;
+      color: var(--ex-text);
+      cursor: text;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px dashed transparent;
+    }
+
+    .footer-author:hover {
+      border-color: #1971c2;
+      background: rgba(25, 113, 194, 0.08);
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1e1e1e;
+      color: #fff;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 15px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.25s ease;
+      z-index: 1000;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 1100px) {
+      .arch-main-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .bottom-layout-grid {
+        grid-template-columns: 1fr;
+      }
+      .pillars-grid {
+        grid-template-columns: repeat(4, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP ACTION TOOLBAR -->
+  <div class="toolbar-bar">
+    <div class="toolbar-left">
+      <span>⚡ Excalidraw System Studio</span>
+      <span class="badge-series">Webhook Architecture</span>
+    </div>
+
+    <div class="toolbar-right">
+      <a href="day4-excalidraw.html" class="btn-action" style="text-decoration:none;">
+        📦 Day 4 Logistics
+      </a>
+      <a href="index.html" class="btn-action" style="text-decoration:none;">
+        🏢 Full Studio
+      </a>
+      <button class="btn-action" onclick="toggleTheme()" id="btn-theme">
+        🌓 Dark / Light
+      </button>
+      <button class="btn-action" onclick="copyLinkedInCaption()">
+        📋 Copy LinkedIn Caption
+      </button>
+      <button class="btn-action btn-primary" onclick="exportExcalidrawPNG()">
+        📸 Download PNG (2.5x Retina)
+      </button>
+    </div>
+  </div>
+
+  <!-- MAIN SCREENSHOT CANVAS -->
+  <div id="capture-card">
+
+    <!-- HEADER: LOGO + TITLE + TOP RIGHT CALLOUT -->
+    <div class="header-row">
+      <div class="header-left">
+        <div class="logo-badge">
+          <!-- Webhook Nodes Icon -->
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="6" cy="18" r="3"></circle>
+            <circle cx="18" cy="18" r="3"></circle>
+            <circle cx="12" cy="6" r="3"></circle>
+            <path d="M12 9v3m-3.5 3.5L12 12m3.5 3.5L12 12"></path>
+          </svg>
+        </div>
+        <div class="title-group">
+          <h1>Webhook Reliability Architecture</h1>
+          <p>Secure • Idempotent • Validated • Event-Driven</p>
+        </div>
+      </div>
+
+      <div class="header-callout-box">
+        <div class="callout-bold">Webhooks are not just POST requests —</div>
+        <div>they are an external event ingestion system. They must be verified, validated, deduplicated and processed in a reliable, transactional way.</div>
+      </div>
+    </div>
+
+    <!-- MAIN GRID: LEFT (PROVIDERS) -> PIPELINE -> RIGHT (CONSUMERS) -->
+    <div class="arch-main-grid">
+
+      <!-- 1. LEFT: EXTERNAL PROVIDERS -->
+      <div class="rough-box">
+        <div class="side-title">External Providers</div>
+        <div class="side-sub">(Payment / Logistics)</div>
+
+        <!-- Payment Providers -->
+        <div class="provider-card">
+          <div class="provider-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+            <span>Payment Providers</span>
+          </div>
+          <div class="bullet-list">
+            <div>• Razorpay</div>
+            <div>• Stripe</div>
+            <div>• Cashfree</div>
+            <div>• etc.</div>
+          </div>
+          <div class="provider-subtext">Sends payment webhooks</div>
+        </div>
+
+        <!-- Logistics Providers -->
+        <div class="provider-card">
+          <div class="provider-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+            <span>Courier / Logistics</span>
+          </div>
+          <div class="bullet-list">
+            <div>• Shiprocket</div>
+            <div>• Delhivery</div>
+            <div>• Own Courier</div>
+            <div>• etc.</div>
+          </div>
+          <div class="provider-subtext">Sends delivery &amp; shipment webhooks</div>
+        </div>
+      </div>
+
+      <!-- ARROW: POST /webhook -->
+      <div class="arrow-col">
+        <div class="arrow-label">POST<br>/webhook</div>
+        <svg viewBox="0 0 30 14" style="width:28px; height:14px;">
+          <path d="M 2 7 Q 14 6 24 7" fill="none" stroke="#1971c2" stroke-width="2.2" stroke-linecap="round"/>
+          <polygon points="22,3 28,7 22,11" fill="#1971c2"/>
+        </svg>
+      </div>
+
+      <!-- 2. CENTER: WEBHOOK PROCESSING PIPELINE -->
+      <div class="pipeline-container">
+        <div class="pipeline-heading">Webhook Processing Pipeline</div>
+
+        <!-- 6 PIPELINE STEPS -->
+        <div class="steps-row-grid">
+
+          <!-- STEP 1: VERIFY SIGNATURE -->
+          <div class="step-card step-1">
+            <div class="step-badge">1</div>
+            <!-- Shield Icon -->
+            <svg class="step-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <div class="step-name" style="color:var(--c-blue-border);">Verify Signature</div>
+            <div class="step-items">
+              <div>• HMAC validation</div>
+              <div>• timingSafeEqual</div>
+              <div>• Reject invalid payloads</div>
+            </div>
+          </div>
+
+          <!-- STEP 2: VALIDATE & PARSE -->
+          <div class="step-card step-2">
+            <div class="step-badge">2</div>
+            <!-- Document Icon -->
+            <svg class="step-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#6741d9" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            <div class="step-name" style="color:var(--c-purple-border);">Validate &amp; Parse</div>
+            <div class="step-items">
+              <div>• Schema validation</div>
+              <div>• Event type check</div>
+              <div>• Provider validation</div>
+              <div>• Extract data</div>
+            </div>
+          </div>
+
+          <!-- STEP 3: IDEMPOTENCY CHECK -->
+          <div class="step-card step-3">
+            <div class="step-badge">3</div>
+            <!-- Fingerprint Icon -->
+            <svg class="step-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#2b8a3e" stroke-width="2.2"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"></path><path d="M14 13.12c0 2.38 0 6.38-1 8.88"></path><path d="M2 16h.01"></path><path d="M21.8 16c.2-2 .131-5.354 0-6"></path><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"></path><path d="M8.65 22c.21-.66.45-1.32.57-2"></path><path d="M9 6.8a6 6 0 0 1 9 5.2v2"></path></svg>
+            <div class="step-name" style="color:var(--c-green-border);">Idempotency Check</div>
+            <div class="step-items">
+              <div>• eventId deduplication</div>
+              <div>• consumerGroup + eventId</div>
+              <div>• Replay protection</div>
+              <div>• Out-of-order check</div>
+            </div>
+          </div>
+
+          <!-- STEP 4: STATE MACHINE -->
+          <div class="step-card step-4">
+            <div class="step-badge">4</div>
+            <!-- State Machine Tree Icon -->
+            <svg class="step-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#d9480f" stroke-width="2.2"><rect x="9" y="3" width="6" height="4" rx="1"></rect><rect x="3" y="15" width="6" height="4" rx="1"></rect><rect x="15" y="15" width="6" height="4" rx="1"></rect><path d="M12 7v4m-6 4v-2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"></path></svg>
+            <div class="step-name" style="color:var(--c-orange-border);">State Machine</div>
+            <div class="step-items">
+              <div>• Validate transition</div>
+              <div>• Update shipment/order</div>
+              <div>• Prevent illegal states</div>
+              <div>• Maintain consistency</div>
+            </div>
+          </div>
+
+          <!-- STEP 5: TRANSACTIONAL UPDATE -->
+          <div class="step-card step-5">
+            <div class="step-badge">5</div>
+            <!-- Database Icon -->
+            <svg class="step-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#0c8599" stroke-width="2.2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+            <div class="step-name" style="color:var(--c-cyan-border);">Transactional Update</div>
+            <div class="step-items">
+              <div>• Update database</div>
+              <div>• Create tracking event</div>
+              <div>• Write audit log</div>
+              <div>• Create outbox event</div>
+            </div>
+          </div>
+
+          <!-- STEP 6: PUBLISH & NOTIFY -->
+          <div class="step-card step-6">
+            <div class="step-badge">6</div>
+            <!-- Share/Publish Icon -->
+            <svg class="step-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#c2255c" stroke-width="2.2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+            <div class="step-name" style="color:var(--c-pink-border);">Publish &amp; Notify</div>
+            <div class="step-items">
+              <div>• Kafka event</div>
+              <div>• Webhook (E-commerce)</div>
+              <div>• Notifications</div>
+              <div>• Downstream services</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- MIDDLE SUB-SECTION: MESSAGE QUEUE & OUTBOX -->
+        <div class="queue-outbox-box">
+          <div class="queue-title">Message Queue &amp; Outbox</div>
+          <div class="queue-row">
+
+            <!-- Kafka Outbox -->
+            <div class="q-item-card">
+              <!-- Database icon -->
+              <svg width="24" height="28" viewBox="0 0 32 38" fill="none" stroke="#1971c2" stroke-width="2">
+                <ellipse cx="16" cy="8" rx="14" ry="5" fill="#e7f5ff"/>
+                <path d="M 2 8 L 2 30 C 2 35 30 35 30 30 L 30 8" fill="#e7f5ff"/>
+                <ellipse cx="16" cy="8" rx="14" ry="5"/>
+                <path d="M 2 18 C 2 23 30 23 30 18"/>
+                <path d="M 2 30 C 2 35 30 35 30 30"/>
+              </svg>
+              <div>
+                <div class="q-item-title" style="color:#1864ab;">Kafka Outbox (PostgreSQL)</div>
+                <div class="q-item-bullets">
+                  <div>• Atomic write with business data</div>
+                  <div>• Reliable event publishing</div>
+                  <div>• Outbox processor</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Double arrow -->
+            <div style="text-align:center; font-size:16px; color:#6741d9;">⟷</div>
+
+            <!-- Apache Kafka -->
+            <div class="q-item-card">
+              <!-- Kafka cluster icon -->
+              <svg width="26" height="26" viewBox="0 0 38 38" fill="none" stroke="#6741d9" stroke-width="2.2">
+                <circle cx="19" cy="19" r="4" fill="#6741d9"/>
+                <circle cx="10" cy="9" r="3" fill="#f3f0ff"/>
+                <circle cx="28" cy="9" r="3" fill="#f3f0ff"/>
+                <circle cx="10" cy="29" r="3" fill="#f3f0ff"/>
+                <circle cx="28" cy="29" r="3" fill="#f3f0ff"/>
+                <path d="M12 11 L17 17 M26 11 L21 17 M12 27 L17 21 M26 27 L21 21"/>
+              </svg>
+              <div>
+                <div class="q-item-title" style="color:#5f3dc4;">Apache Kafka</div>
+                <div class="q-item-bullets">
+                  <div>• 5 fixed topics</div>
+                  <div>• At-least-once delivery</div>
+                  <div>• Idempotent consumers</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Double arrow -->
+            <div style="text-align:center; font-size:16px; color:#6741d9;">⟷</div>
+
+            <!-- Redis -->
+            <div class="q-item-card">
+              <!-- Redis icon -->
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d9480f" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                <path d="M2 17l10 5 10-5"></path>
+                <path d="M2 12l10 5 10-5"></path>
+              </svg>
+              <div>
+                <div class="q-item-title" style="color:#c93b05;">Redis (Optional)</div>
+                <div class="q-item-bullets">
+                  <div>• Cache</div>
+                  <div>• Rate limiting</div>
+                  <div>• Distributed locks</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- INFRASTRUCTURE LAYER -->
+        <div class="infra-layer">
+          <div class="infra-title">Infrastructure Layer</div>
+          <div class="infra-grid">
+            <div class="infra-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+              <span>PostgreSQL (Database)</span>
+            </div>
+            <div class="infra-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path></svg>
+              <span>Load Balancer (If required)</span>
+            </div>
+            <div class="infra-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+              <span>Object Storage (Logs / Payloads)</span>
+            </div>
+            <div class="infra-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+              <span>Monitoring &amp; Observability</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ARROW TO CONSUMERS -->
+      <div class="arrow-col">
+        <svg viewBox="0 0 30 14" style="width:28px; height:14px;">
+          <path d="M 2 7 Q 14 6 24 7" fill="none" stroke="#2b8a3e" stroke-width="2.2" stroke-linecap="round"/>
+          <polygon points="22,3 28,7 22,11" fill="#2b8a3e"/>
+        </svg>
+      </div>
+
+      <!-- 3. RIGHT: EVENT CONSUMERS -->
+      <div class="rough-box">
+        <div class="side-title">Event Consumers</div>
+        <div style="height:14px;"></div>
+
+        <!-- E-Commerce Service -->
+        <div class="consumer-card">
+          <div class="consumer-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+            <span>E-Commerce Service</span>
+          </div>
+          <div class="bullet-list">
+            <div>• Order status update</div>
+            <div>• Shipment tracking</div>
+            <div>• Customer notifications</div>
+          </div>
+        </div>
+
+        <!-- Other Services -->
+        <div class="consumer-card">
+          <div class="consumer-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span>Other Services</span>
+          </div>
+          <div class="bullet-list">
+            <div>• Analytics</div>
+            <div>• Monitoring</div>
+            <div>• Reporting</div>
+          </div>
+        </div>
+
+        <!-- Kafka Consumers -->
+        <div class="consumer-card">
+          <div class="consumer-header">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+            <span>Kafka Consumers</span>
+          </div>
+          <div class="bullet-list">
+            <div>• Inventory</div>
+            <div>• Notifications</div>
+            <div>• Analytics</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- BOTTOM PANELS: KEY RELIABILITY PRINCIPLES (7 PILLARS) + THE BIG PICTURE -->
+    <div class="bottom-layout-grid">
+
+      <!-- 7 PRINCIPLES -->
+      <div class="principles-box">
+        <div class="principles-title">Key Reliability Principles</div>
+        <div class="pillars-grid">
+
+          <!-- 1. Signature Verification -->
+          <div class="pillar-card">
+            <svg class="pillar-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#2b8a3e" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <div class="pillar-title p-green">Signature Verification</div>
+            <div>Never trust webhook payloads blindly.</div>
+          </div>
+
+          <!-- 2. Idempotency -->
+          <div class="pillar-card">
+            <svg class="pillar-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#6741d9" stroke-width="2.2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <div class="pillar-title p-purple">Idempotency</div>
+            <div>Same webhook multiple times should not create duplicates.</div>
+          </div>
+
+          <!-- 3. Replay Protection -->
+          <div class="pillar-card">
+            <svg class="pillar-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2.2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+            <div class="pillar-title p-blue">Replay Protection</div>
+            <div>Old requests shouldn't be accepted indefinitely.</div>
+          </div>
+
+          <!-- 4. Out-of-Order Protection -->
+          <div class="pillar-card">
+            <svg class="pillar-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#d9480f" stroke-width="2.2"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+            <div class="pillar-title p-orange">Out-of-Order Protection</div>
+            <div>Delivered should not be followed by an older event.</div>
+          </div>
+
+          <!-- 5. State Machine Validation -->
+          <div class="pillar-card">
+            <svg class="pillar-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#0c8599" stroke-width="2.2"><rect x="9" y="3" width="6" height="4" rx="1"></rect><rect x="3" y="15" width="6" height="4" rx="1"></rect><rect x="15" y="15" width="6" height="4" rx="1"></rect><path d="M12 7v4m-6 4v-2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"></path></svg>
+            <div class="pillar-title p-cyan">State Machine Validation</div>
+            <div>Only valid transitions should be accepted.</div>
+          </div>
+
+          <!-- 6. Atomic DB Updates -->
+          <div class="pillar-card">
+            <svg class="pillar-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#c2255c" stroke-width="2.2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+            <div class="pillar-title p-pink">Atomic DB Updates</div>
+            <div>State + tracking + audit + outbox must remain consistent.</div>
+          </div>
+
+          <!-- 7. Retry Handling -->
+          <div class="pillar-card">
+            <svg class="pillar-icon-svg" viewBox="0 0 24 24" fill="none" stroke="#183153" stroke-width="2.2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            <div class="pillar-title p-navy">Retry Handling</div>
+            <div>Temporary failures should be safely retried.</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- THE BIG PICTURE -->
+      <div class="big-picture-box">
+        <div>
+          <div class="big-picture-title">
+            <span>💡 The Big Picture</span>
+          </div>
+          <div class="big-picture-desc">
+            Webhooks are the bridge between external systems and your platform.
+          </div>
+          <div class="flow-pipeline-text">
+            Untrusted ➔ Verify ➔ Validate ➔ Deduplicate ➔ State Machine ➔ Persist ➔ Publish
+          </div>
+        </div>
+
+        <div class="highlight-pill">
+          Reliable webhooks = Real-time systems + Consistent data + Happy customers
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FOOTER SIGNATURE -->
+    <div class="ex-footer">
+      <div>
+        <span style="font-size:12px; color:var(--ex-text-muted);">SYSTEM DESIGN SERIES:</span>
+        <span class="footer-author" contenteditable="true" title="Click to edit your handle!">By Mrityunjay Kumar | Webhook Reliability Architecture</span>
+      </div>
+
+      <div style="font-weight:700; color:var(--ex-text-muted);">
+        <span>Made with 💜 for LinkedIn</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast">Downloaded!</div>
+
+  <script>
+    // Toggle Light / Dark mode
+    function toggleTheme() {
+      document.body.classList.toggle('dark-mode');
+      const isDark = document.body.classList.contains('dark-mode');
+      showToast(isDark ? '🌙 Dark Mode Activated' : '☀️ Light Mode Activated');
+    }
+
+    // High-Resolution PNG Exporter
+    function exportExcalidrawPNG() {
+      const card = document.getElementById('capture-card');
+      showToast('📸 Rendering 2.5x Retina Excalidraw PNG...');
+
+      window.scrollTo(0, 0);
+
+      html2canvas(card, {
+        scale: 2.5, // Crisp 2.5x resolution for viral clarity on LinkedIn
+        backgroundColor: document.body.classList.contains('dark-mode') ? '#12141a' : '#ffffff',
+        useCORS: true,
+        logging: false
+      }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'Webhook-Reliability-Architecture-Excalidraw.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('✅ Downloaded! Ready to post on LinkedIn.');
+      }).catch(err => {
+        console.error(err);
+        showToast('❌ Export error. Use Win + Shift + S to screenshot.');
+      });
+    }
+
+    // Copy Webhook Reliability LinkedIn Caption
+    function copyLinkedInCaption() {
+      const caption = `Webhook Reliability Architecture: How to Ingest External Events at Scale! 🚀
+
+Webhooks are NOT just simple POST requests — they are an untrusted external event ingestion gateway.
+If Stripe, Razorpay, or Shiprocket send webhooks, how do you guarantee zero duplicate charges, zero lost events, and out-of-order resilience?
+
+Here is the complete end-to-end 6-stage Webhook Processing Pipeline:
+
+1️⃣ Verify Signature (HMAC Validation):
+• Never trust webhook payloads blindly.
+• Use crypto.timingSafeEqual() to prevent timing attacks.
+
+2️⃣ Validate & Parse:
+• Strict schema validation (Zod/class-validator) & event type parsing before touching the database.
+
+3️⃣ Idempotency Check (Duplicate Defense):
+• Webhooks deliver with 'At-Least-Once' guarantees, meaning duplicate deliveries ARE guaranteed to happen.
+• Check 'eventId' in an idempotent Redis/DB store with TTL. If already processed, acknowledge with 200 OK immediately and drop!
+
+4️⃣ State Machine Validation:
+• Prevent illegal order/shipment status regressions (e.g. 'DELIVERED' followed by delayed 'OUT_FOR_DELIVERY' packet).
+
+5️⃣ Transactional Update & Outbox Pattern:
+• Atomic database commit: Business state + Tracking record + Audit log + Outbox Event in ONE single ACID SQL transaction!
+
+6️⃣ Publish & Downstream Notification:
+• Asynchronously stream to Apache Kafka topics to notify E-Commerce, analytics, and notification workers without slowing down webhook acknowledgment.
+
+✨ The 7 Golden Rules of Webhook Reliability:
+1. Signature Verification
+2. Idempotency & Deduplication
+3. Replay Protection
+4. Out-of-Order Protection
+5. State Machine Validation
+6. Atomic DB Updates (Outbox)
+7. Exponential Backoff Retry Handling
+
+The Big Picture:
+Untrusted ➔ Verify ➔ Validate ➔ Deduplicate ➔ State Machine ➔ Persist ➔ Publish
+
+How do you handle webhook retries and duplicate events in your backend? Drop your thoughts below! 👇
+
+#SystemDesign #SoftwareArchitecture #Microservices #Webhooks #NodeJS #Stripe #Razorpay #Kafka #PostgreSQL #Backend #FullStack`;
+
+      navigator.clipboard.writeText(caption).then(() => {
+        showToast('📋 Webhook Caption copied to clipboard!');
+      }).catch(() => {
+        showToast('Failed to copy. Please copy manually.');
+      });
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.classList.add('show');
+      setTimeout(() => {
+        t.classList.remove('show');
+      }, 3500);
+    }
+  </script>
+</body>
+</html>
