@@ -128,16 +128,19 @@ This repository includes a single-file, interactive studio (`index.html`) ready 
 start index.html
 start day4-excalidraw.html
 start webhook-reliability-excalidraw.html
+start day6-idempotency-excalidraw.html
 
 # macOS
 open index.html
 open day4-excalidraw.html
 open webhook-reliability-excalidraw.html
+open day6-idempotency-excalidraw.html
 
 # Linux
 xdg-open index.html
 xdg-open day4-excalidraw.html
 xdg-open webhook-reliability-excalidraw.html
+xdg-open day6-idempotency-excalidraw.html
 ```
 
 ---
@@ -164,6 +167,33 @@ An authentic hand-drawn Excalidraw architectural diagram based on real-world fin
 - **7 Reliability Pillars**: Cryptographic verification, Deduplication, Fast ACK, Monotonic State Machines, Transactional Outbox, Dead Letter Queue (DLQ), and Audit Logging.
 - **Provider & Consumer Ecosystem**: Ingestion from Payment Gateways (Razorpay, Stripe) & Logistics (Shiprocket, Delhivery), consuming across Order, Fulfillment, and Analytics microservices.
 - **Interactive Tools**: 🌓 Dark/Light Mode, 📸 2.5x Retina PNG Export, and 📋 1-Click LinkedIn Caption Copy.
+
+---
+
+## 🔑 Day 6 Excalidraw Edition: Idempotency in Production Systems (`day6-idempotency-excalidraw.html`)
+An authentic hand-drawn Excalidraw architectural diagram based on real-world mission-critical payment and order processing:
+- **Core Principle**: *"Same Request ≠ Duplicate Operation — Build for retries, not just success."*
+- **6-Stage Production Pipeline**:
+  1. **Client**: Issues HTTP requests with a unique `Idempotency-Key` header (e.g. `POST /payments/create`).
+  2. **API Gateway / Controller**: Extracts and validates the key, evaluates rate limits, and forwards to the microservice.
+  3. **Idempotency Check (Redis + PostgreSQL Dual Store)**:
+     - `Redis`: Ultra-fast sub-millisecond cache lookup & distributed lock.
+     - `PostgreSQL`: Authoritative source of truth.
+     - `Key Found (YES)`: Instantly return stored response without re-executing business logic.
+     - `Key Not Found (NO)`: Safely proceed with domain execution.
+  4. **Business Service**: Executes payment/order logic, validates state transitions, and calculates domain state.
+  5. **Database Transaction**: Atomic ACID commit saving business entities, idempotency records, tracking events, and the Transactional Outbox event in **one single SQL transaction**.
+  6. **Outbox + Kafka**: Asynchronously streams events to Kafka topic (`courier.shipment.events` / `order.paid.events`), preventing the dual-write hazard.
+- **Consumer Inbox Pattern (Step 7)**:
+  - Microservice consumers (`E-Commerce`, `Logistics`, `Notifications`, `Analytics`) maintain their own `Inbox/ProcessedEvents` table (`UNIQUE(consumerGroup, eventId)`) to ensure exactly-once side effects.
+- **Key Database Constraints**:
+  - `UNIQUE(provider, idempotencyKey)`
+  - `UNIQUE(sellerId, externalOrderId)`
+  - `UNIQUE(paymentProvider, transactionId)`
+  - `UNIQUE(eventId, consumerGroup)`
+- **The Big Lesson**:
+  > "Idempotency is not just a Redis key. Exactly-once behavior is achieved through idempotent processing, not by assuming the network will deliver exactly once."
+- **Interactive Tools**: 🌓 Light/Dark mode, 📸 2.5x Retina PNG Export, and 📋 1-Click LinkedIn Post Caption Copy.
 
 ---
 
