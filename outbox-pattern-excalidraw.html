@@ -1,0 +1,1606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Transactional Outbox Pattern (Excalidraw Style) | LinkedIn System Design Series</title>
+  <!-- Google Fonts: Excalidraw Hand-drawn typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fira+Code:wght@500;600;700&family=Kalam:wght@400;700&family=Patrick+Hand&family=Shantell+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- html2canvas for High-Res PNG export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --ex-bg: #ffffff;
+      --ex-grid: rgba(0, 0, 0, 0.04);
+      --ex-text: #1e1e1e;
+      --ex-text-muted: #495057;
+      --ex-stroke: #1e1e1e;
+      
+      --c-blue: #1971c2;
+      --c-blue-bg: #e7f5ff;
+      --c-blue-border: #1864ab;
+      
+      --c-green: #2b8a3e;
+      --c-green-bg: #ebfbee;
+      --c-green-border: #237032;
+      
+      --c-purple: #6741d9;
+      --c-purple-bg: #f3f0ff;
+      --c-purple-border: #5f3dc4;
+      
+      --c-orange: #d9480f;
+      --c-orange-bg: #fff4e6;
+      --c-orange-border: #c93b05;
+      
+      --c-cyan: #0c8599;
+      --c-cyan-bg: #e3fafc;
+      --c-cyan-border: #0b7285;
+      
+      --c-pink: #c2255c;
+      --c-pink-bg: #fff0f6;
+      --c-pink-border: #a61e4d;
+
+      --c-amber: #f59f00;
+      --c-amber-bg: #fff9db;
+      --c-amber-border: #f08c00;
+
+      --c-navy: #0b1f3a;
+      --c-navy-bg: #e8f0fe;
+    }
+
+    body.dark-mode {
+      --ex-bg: #12141a;
+      --ex-grid: rgba(255, 255, 255, 0.05);
+      --ex-text: #f8f9fa;
+      --ex-text-muted: #ced4da;
+      --ex-stroke: #e9ecef;
+      
+      --c-blue: #4dabf7;
+      --c-blue-bg: rgba(25, 113, 194, 0.22);
+      --c-blue-border: #74c0fc;
+      
+      --c-green: #51cf66;
+      --c-green-bg: rgba(43, 138, 62, 0.22);
+      --c-green-border: #69db7c;
+      
+      --c-purple: #9775fa;
+      --c-purple-bg: rgba(103, 65, 217, 0.22);
+      --c-purple-border: #b197fc;
+      
+      --c-orange: #ff922b;
+      --c-orange-bg: rgba(217, 72, 15, 0.22);
+      --c-orange-border: #ffa94d;
+      
+      --c-cyan: #3bc9db;
+      --c-cyan-bg: rgba(12, 133, 153, 0.22);
+      --c-cyan-border: #66d9e8;
+      
+      --c-pink: #f783ac;
+      --c-pink-bg: rgba(194, 37, 92, 0.22);
+      --c-pink-border: #faa2c1;
+
+      --c-amber: #ffd43b;
+      --c-amber-bg: rgba(245, 159, 0, 0.22);
+      --c-amber-border: #ffe066;
+
+      --c-navy: #74c0fc;
+      --c-navy-bg: rgba(11, 31, 58, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #d8dee4;
+      color: var(--ex-text);
+      font-family: 'Patrick Hand', 'Kalam', 'Caveat', cursive, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    /* TOP ACTION TOOLBAR */
+    .toolbar-bar {
+      width: 100%;
+      max-width: 1340px;
+      background: #ffffff;
+      border: 2px solid #1e1e1e;
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 10px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 3px 3px 0px #1e1e1e;
+    }
+
+    body.dark-mode .toolbar-bar {
+      background: #1e1e1e;
+      border-color: #e9ecef;
+      box-shadow: 3px 3px 0px #e9ecef;
+      color: #fff;
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .badge-series {
+      background: #1971c2;
+      color: #fff;
+      font-size: 13px;
+      padding: 3px 12px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+      font-family: 'Shantell Sans', cursive;
+      font-weight: 700;
+    }
+
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-action {
+      background: #ffffff;
+      border: 1.8px solid #1e1e1e;
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 6px 13px;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e1e1e;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 2px 2px 0px #1e1e1e;
+      transition: all 0.15s ease;
+    }
+
+    body.dark-mode .btn-action {
+      background: #2b2d35;
+      color: #f8f9fa;
+      border-color: #ced4da;
+      box-shadow: 2px 2px 0px #ced4da;
+    }
+
+    .btn-action:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0px var(--ex-stroke);
+    }
+
+    .btn-action:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0px var(--ex-stroke);
+    }
+
+    .btn-primary {
+      background: #1971c2;
+      color: #ffffff;
+      border-color: #1864ab;
+      box-shadow: 2px 2px 0px #0b1f3a;
+    }
+
+    body.dark-mode .btn-primary {
+      background: #1971c2;
+      color: #ffffff;
+      border-color: #4dabf7;
+    }
+
+    /* CAPTURE CANVAS TARGET */
+    #capture-card {
+      width: 100%;
+      max-width: 1340px;
+      background-color: var(--ex-bg);
+      background-image: 
+        radial-gradient(var(--ex-grid) 1.5px, transparent 1.5px),
+        radial-gradient(var(--ex-grid) 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+      background-position: 0 0, 12px 12px;
+      border: 3px solid var(--ex-stroke);
+      border-radius: 255px 25px 225px 25px/25px 225px 25px 255px;
+      box-shadow: 8px 8px 0px var(--ex-stroke);
+      padding: 30px 34px 24px 34px;
+      position: relative;
+    }
+
+    /* HEADER ROW */
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: stretch;
+      gap: 24px;
+      margin-bottom: 24px;
+      background: #0b1f3a;
+      color: #ffffff;
+      border: 2.5px solid var(--ex-stroke);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 18px 24px;
+      box-shadow: 4px 4px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .header-row {
+      background: #0f1626;
+    }
+
+    .header-left {
+      flex: 1.2;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .main-title {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 34px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.5px;
+      color: #ffffff;
+    }
+
+    .main-title span.title-highlight {
+      color: #38bdf8;
+    }
+
+    .main-subtitle {
+      font-family: 'Patrick Hand', cursive;
+      font-size: 19px;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-top: 4px;
+    }
+
+    .main-subtitle strong {
+      color: #ffffff;
+      font-weight: 800;
+    }
+
+    .header-right-box {
+      flex: 1;
+      border-left: 2px dashed rgba(255, 255, 255, 0.25);
+      padding-left: 20px;
+      display: flex;
+      align-items: center;
+      font-size: 13.5px;
+      line-height: 1.45;
+      color: #e2e8f0;
+    }
+
+    /* TOP ARCHITECTURE PIPELINE */
+    .arch-pipeline {
+      display: grid;
+      grid-template-columns: 1.1fr auto 2.5fr auto 1.35fr auto 1.1fr auto 1.3fr;
+      align-items: stretch;
+      gap: 6px;
+      margin-bottom: 24px;
+    }
+
+    .flow-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ex-stroke);
+    }
+
+    .flow-arrow svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    /* ARCH CARD COMMON */
+    .arch-card {
+      border: 2px solid var(--ex-stroke);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 12px 14px;
+      background: #ffffff;
+      box-shadow: 2.5px 2.5px 0px var(--ex-stroke);
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.dark-mode .arch-card {
+      background: #181b22;
+    }
+
+    /* COLUMN 1: E-COMMERCE / LOGISTICS SERVICE */
+    .card-service {
+      border-color: var(--c-blue-border);
+      background: var(--c-blue-bg);
+      justify-content: space-between;
+    }
+
+    .service-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .service-title {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--c-blue);
+      line-height: 1.25;
+    }
+
+    .service-badge-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .num-badge {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--c-blue);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    /* COLUMN 2: POSTGRESQL (DATABASE) GROUP */
+    .postgres-group {
+      border: 2px dashed var(--c-blue-border);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 10px 12px;
+      background: rgba(25, 113, 194, 0.03);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 2px 2px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .postgres-group {
+      background: rgba(25, 113, 194, 0.08);
+    }
+
+    .postgres-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Shantell Sans', cursive;
+      font-size: 13.5px;
+      font-weight: 800;
+      color: var(--c-blue);
+      margin-bottom: 8px;
+    }
+
+    .postgres-inner-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .trans-box {
+      border: 1.8px dashed var(--c-blue-border);
+      border-radius: 10px;
+      background: #ffffff;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 1px 1px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .trans-box {
+      background: #151922;
+    }
+
+    .trans-title {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--c-blue);
+      text-align: center;
+      margin-bottom: 6px;
+      border-bottom: 1px dashed rgba(25, 113, 194, 0.3);
+      padding-bottom: 4px;
+    }
+
+    .trans-step-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10.5px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      line-height: 1.25;
+    }
+
+    .commit-badge {
+      background: #ebfbee;
+      border: 1.5px solid var(--c-green-border);
+      border-radius: 20px;
+      padding: 3px 8px;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: var(--c-green);
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      box-shadow: 1px 1px 0px var(--ex-stroke);
+      margin-top: 4px;
+    }
+
+    body.dark-mode .commit-badge {
+      background: rgba(43, 138, 62, 0.25);
+    }
+
+    .outbox-table-card {
+      border: 1.8px solid var(--c-purple-border);
+      border-radius: 10px;
+      background: var(--c-purple-bg);
+      padding: 8px 10px;
+      box-shadow: 1.5px 1.5px 0px var(--ex-stroke);
+    }
+
+    .outbox-table-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Shantell Sans', cursive;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--c-purple);
+      margin-bottom: 6px;
+    }
+
+    .schema-list {
+      font-family: 'Fira Code', monospace;
+      font-size: 9.5px;
+      line-height: 1.35;
+      color: var(--ex-text);
+      list-style: none;
+    }
+
+    .schema-list li {
+      padding: 1px 0;
+    }
+
+    .schema-status {
+      color: #d9480f;
+      font-weight: 700;
+    }
+
+    /* COLUMN 3: OUTBOX WORKER */
+    .card-worker {
+      border-color: var(--c-green-border);
+      background: var(--c-green-bg);
+    }
+
+    .worker-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Shantell Sans', cursive;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--c-green);
+    }
+
+    .worker-sub {
+      font-size: 10px;
+      color: var(--ex-text-muted);
+      margin-bottom: 8px;
+    }
+
+    .worker-steps-list {
+      list-style: none;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .worker-steps-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .badge-worker-num {
+      background: var(--c-green);
+      color: #fff;
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* COLUMN 4: KAFKA */
+    .card-kafka {
+      border-color: var(--c-purple-border);
+      background: var(--c-purple-bg);
+    }
+
+    .kafka-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Shantell Sans', cursive;
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--c-purple);
+      margin-bottom: 8px;
+    }
+
+    .topics-box {
+      background: #ffffff;
+      border: 1.2px solid var(--c-purple-border);
+      border-radius: 8px;
+      padding: 6px 8px;
+      box-shadow: 1px 1px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .topics-box {
+      background: #171622;
+    }
+
+    .topics-title {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: var(--c-purple);
+      margin-bottom: 4px;
+    }
+
+    .topics-list {
+      list-style: none;
+      font-family: 'Fira Code', monospace;
+      font-size: 9.5px;
+      line-height: 1.35;
+      color: var(--ex-text);
+    }
+
+    /* COLUMN 5: CONSUMERS STACK */
+    .consumers-stack-col {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .consumers-stack-header {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 12.5px;
+      font-weight: 800;
+      color: var(--ex-text);
+      margin-bottom: 2px;
+    }
+
+    .consumer-pill-item {
+      border: 1.5px solid var(--ex-stroke);
+      border-radius: 8px;
+      padding: 5px 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      box-shadow: 1.5px 1.5px 0px var(--ex-stroke);
+      background: #ffffff;
+    }
+
+    body.dark-mode .consumer-pill-item {
+      background: #181b22;
+    }
+
+    .consumer-text-group {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.15;
+    }
+
+    .consumer-main-name {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 10.5px;
+      font-weight: 800;
+    }
+
+    .consumer-sub-action {
+      font-size: 9px;
+      color: var(--ex-text-muted);
+    }
+
+    /* MIDDLE STEP-BY-STEP FLOW CONTAINER */
+    .step-flow-container {
+      border: 2.2px solid var(--c-blue-border);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 16px 18px;
+      background: #f8fafc;
+      box-shadow: 3px 3px 0px var(--ex-stroke);
+      margin-bottom: 24px;
+    }
+
+    body.dark-mode .step-flow-container {
+      background: #151821;
+    }
+
+    .step-flow-badge-title {
+      display: inline-block;
+      background: #1971c2;
+      color: #ffffff;
+      font-family: 'Shantell Sans', cursive;
+      font-size: 13.5px;
+      font-weight: 800;
+      padding: 3px 14px;
+      border-radius: 12px;
+      border: 1.5px solid var(--ex-stroke);
+      box-shadow: 2px 2px 0px var(--ex-stroke);
+      margin-bottom: 14px;
+    }
+
+    .step-flow-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr auto 1fr auto 1fr;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .flow-step-card {
+      border: 1.8px solid var(--ex-stroke);
+      border-radius: 255px 12px 225px 12px/12px 225px 12px 255px;
+      padding: 10px 10px;
+      background: #ffffff;
+      min-height: 130px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 2px 2px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .flow-step-card {
+      background: #1c202c;
+    }
+
+    .flow-step-top {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+      font-family: 'Shantell Sans', cursive;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .flow-step-icon {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 6px;
+    }
+
+    .flow-step-desc {
+      font-size: 11px;
+      line-height: 1.25;
+      color: var(--ex-text);
+      text-align: center;
+    }
+
+    /* FLOW STEP CARDS SPECIFIC COLORS */
+    .f-step-1 { border-color: var(--c-blue-border); background: var(--c-blue-bg); }
+    .f-step-1 .flow-step-top { color: var(--c-blue); }
+    .f-badge-1 { background: var(--c-blue); }
+
+    .f-step-2 { border-color: var(--c-blue-border); background: var(--c-blue-bg); }
+    .f-step-2 .flow-step-top { color: var(--c-blue); }
+    .f-badge-2 { background: var(--c-blue); }
+
+    .f-step-3 { border-color: var(--c-green-border); background: var(--c-green-bg); }
+    .f-step-3 .flow-step-top { color: var(--c-green); }
+    .f-badge-3 { background: var(--c-green); }
+
+    .f-step-4 { border-color: var(--c-purple-border); background: var(--c-purple-bg); }
+    .f-step-4 .flow-step-top { color: var(--c-purple); }
+    .f-badge-4 { background: var(--c-purple); }
+
+    .f-step-5 { border-color: var(--c-orange-border); background: var(--c-orange-bg); }
+    .f-step-5 .flow-step-top { color: var(--c-orange); }
+    .f-badge-5 { background: var(--c-orange); }
+
+    .f-step-6 { border-color: var(--c-cyan-border); background: var(--c-cyan-bg); }
+    .f-step-6 .flow-step-top { color: var(--c-cyan); }
+    .f-badge-6 { background: var(--c-cyan); }
+
+    /* BOTTOM 3 STRATEGIC PANELS */
+    .bottom-panels-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr 1.15fr;
+      gap: 16px;
+      align-items: stretch;
+      margin-bottom: 24px;
+    }
+
+    .strat-panel {
+      border: 2px solid var(--ex-stroke);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 14px 16px;
+      background: #ffffff;
+      box-shadow: 3px 3px 0px var(--ex-stroke);
+      display: flex;
+      flex-direction: column;
+    }
+
+    body.dark-mode .strat-panel {
+      background: #181b22;
+    }
+
+    .strat-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Shantell Sans', cursive;
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    /* PANEL 1: WHY IT'S IMPORTANT */
+    .panel-why {
+      border-color: var(--c-green-border);
+      background: var(--c-green-bg);
+    }
+    .panel-why .strat-panel-header { color: var(--c-green); }
+
+    .why-bullets {
+      list-style: none;
+      font-size: 12px;
+      line-height: 1.45;
+      font-weight: 600;
+    }
+
+    .why-bullets li {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .why-bullets li::before {
+      content: "•";
+      font-weight: 900;
+      color: var(--c-green);
+    }
+
+    /* PANEL 2: WHAT HAPPENS IF KAFKA IS DOWN */
+    .panel-kafka-down {
+      border-color: var(--c-pink-border);
+      background: var(--c-pink-bg);
+    }
+    .panel-kafka-down .strat-panel-header { color: var(--c-pink); }
+
+    .recovery-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 11.5px;
+      font-weight: 700;
+    }
+
+    .recovery-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      border: 1.5px solid var(--c-pink-border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      box-shadow: 1px 1px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .recovery-item {
+      background: #1c151c;
+    }
+
+    .recovery-arrow {
+      text-align: center;
+      font-weight: 900;
+      color: var(--c-pink);
+      line-height: 1;
+    }
+
+    /* PANEL 3: IMPORTANT NOTE */
+    .panel-important-note {
+      border-color: var(--c-purple-border);
+      background: var(--c-purple-bg);
+    }
+    .panel-important-note .strat-panel-header { color: var(--c-purple); }
+
+    .note-bold-callout {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 13px;
+      font-weight: 800;
+      color: #c92a2a;
+      margin-bottom: 8px;
+      line-height: 1.35;
+    }
+
+    body.dark-mode .note-bold-callout {
+      color: #ff8787;
+    }
+
+    .note-explain {
+      font-size: 12px;
+      color: var(--ex-text);
+      margin-bottom: 10px;
+    }
+
+    .combo-formula-card {
+      background: #ffffff;
+      border: 1.8px solid var(--c-purple-border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      box-shadow: 2px 2px 0px var(--ex-stroke);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    body.dark-mode .combo-formula-card {
+      background: #181524;
+    }
+
+    .formula-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* FOOTER RIBBON */
+    .footer-ribbon {
+      background: var(--c-navy);
+      color: #ffffff;
+      border: 2px solid var(--ex-stroke);
+      border-radius: 255px 12px 225px 12px/12px 225px 12px 255px;
+      padding: 11px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      box-shadow: 3px 3px 0px var(--ex-stroke);
+      font-family: 'Shantell Sans', cursive;
+      font-size: 13px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    /* AUTHOR BRANDING FOOTER */
+    .branding-footer {
+      margin-top: 18px;
+      padding-top: 12px;
+      border-top: 1.5px dashed var(--ex-stroke);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--ex-text-muted);
+    }
+
+    .branding-author {
+      font-weight: 700;
+      color: var(--ex-text);
+      cursor: text;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px dashed transparent;
+    }
+
+    .branding-author:hover {
+      border-color: #1971c2;
+      background: rgba(25, 113, 194, 0.08);
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1e1e1e;
+      color: #fff;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 15px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.25s ease;
+      z-index: 1000;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 1150px) {
+      .arch-pipeline {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .flow-arrow {
+        transform: rotate(90deg);
+        padding: 6px 0;
+      }
+      .step-flow-grid {
+        grid-template-columns: 1fr;
+      }
+      .bottom-panels-grid {
+        grid-template-columns: 1fr;
+      }
+      .postgres-inner-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP ACTION TOOLBAR -->
+  <div class="toolbar-bar">
+    <div class="toolbar-left">
+      <span>⚡ Excalidraw System Studio</span>
+      <span class="badge-series">Transactional Outbox Pattern</span>
+    </div>
+
+    <div class="toolbar-right">
+      <a href="day6-idempotency-excalidraw.html" class="btn-action" style="text-decoration:none;">
+        🔑 Day 6 Idempotency
+      </a>
+      <a href="webhook-reliability-excalidraw.html" class="btn-action" style="text-decoration:none;">
+        ⚡ Day 5 Webhook
+      </a>
+      <a href="day4-excalidraw.html" class="btn-action" style="text-decoration:none;">
+        📦 Day 4 Logistics
+      </a>
+      <a href="index.html" class="btn-action" style="text-decoration:none;">
+        🏢 Full Studio
+      </a>
+      <button class="btn-action" onclick="toggleTheme()" id="btn-theme">
+        🌓 Dark / Light
+      </button>
+      <button class="btn-action" onclick="copyLinkedInCaption()">
+        📋 Copy LinkedIn Caption
+      </button>
+      <button class="btn-action btn-primary" onclick="exportExcalidrawPNG()">
+        📸 Download PNG (2.5x Retina)
+      </button>
+    </div>
+  </div>
+
+  <!-- CAPTURE CANVAS TARGET -->
+  <div id="capture-card">
+
+    <!-- TOP HEADER ROW (DARK BLUE BORDERED CONTAINER) -->
+    <div class="header-row">
+      <div class="header-left">
+        <h1 class="main-title">Transactional <span class="title-highlight">Outbox Pattern</span></h1>
+        <div class="main-subtitle">
+          Ensure database changes and event <strong>publishing</strong> happen reliably and atomically.
+        </div>
+      </div>
+      <div class="header-right-box">
+        The outbox pattern solves the dual-write problem by storing events in the same database transaction as the business data. Events are published asynchronously by a background worker.
+      </div>
+    </div>
+
+    <!-- MAIN ARCHITECTURE PIPELINE (5 COLUMNS) -->
+    <div class="arch-pipeline">
+
+      <!-- COL 1: E-COMMERCE / LOGISTICS SERVICE -->
+      <div class="arch-card card-service">
+        <div>
+          <div class="service-top">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+              <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            </svg>
+            <div class="service-title">
+              E-commerce / Logistics Service<br/>
+              <span style="font-size:11px; color:var(--ex-text-muted);">(NestJS)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="service-badge-row">
+          <span class="num-badge">1</span>
+          <span>Business operation (e.g. create order, update shipment)</span>
+        </div>
+      </div>
+
+      <!-- ARROW 1 -> 2 -->
+      <div class="flow-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </div>
+
+      <!-- COL 2: POSTGRESQL (DATABASE) -->
+      <div class="postgres-group">
+        <div class="postgres-header">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="#1971c2" stroke="#1864ab" stroke-width="1.5">
+            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+          </svg>
+          <span>PostgreSQL (Database)</span>
+        </div>
+
+        <div class="postgres-inner-grid">
+
+          <!-- TRANSACTION SUB-BOX -->
+          <div class="trans-box">
+            <div class="trans-title">Transaction</div>
+
+            <div class="trans-step-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6741d9" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+              <span>Update business data<br/>(e.g. order, shipment)</span>
+            </div>
+
+            <div class="trans-step-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+              </svg>
+              <span>Insert tracking/audit logs</span>
+            </div>
+
+            <div class="trans-step-item">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d9480f" stroke-width="2">
+                <path d="M4 11a9 9 0 0 1 9 9"></path>
+                <path d="M4 4a16 16 0 0 1 16 16"></path>
+                <circle cx="5" cy="19" r="1"></circle>
+              </svg>
+              <span>Insert outbox event</span>
+            </div>
+
+            <div class="commit-badge">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              <span>COMMIT (Atomic)</span>
+            </div>
+          </div>
+
+          <!-- OUTBOX TABLE CARD -->
+          <div class="outbox-table-card">
+            <div class="outbox-table-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6741d9" stroke-width="2.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+              </svg>
+              <span>Outbox Table</span>
+            </div>
+            <ul class="schema-list">
+              <li>id</li>
+              <li>aggregate_type</li>
+              <li>aggregate_id</li>
+              <li>event_type</li>
+              <li>payload</li>
+              <li>status <span class="schema-status">(PENDING)</span></li>
+              <li>created_at</li>
+              <li>retry_count</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ARROW 2 -> 3 -->
+      <div class="flow-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </div>
+
+      <!-- COL 3: OUTBOX WORKER -->
+      <div class="arch-card card-worker">
+        <div class="worker-header">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2b8a3e" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>Outbox Worker</span>
+        </div>
+        <div class="worker-sub">Background worker (polling / event-driven)</div>
+
+        <ul class="worker-steps-list">
+          <li>
+            <span class="badge-worker-num">2</span>
+            <span>Fetch pending events</span>
+          </li>
+          <li>
+            <span class="badge-worker-num">3</span>
+            <span>Publish to Kafka</span>
+          </li>
+          <li>
+            <span class="badge-worker-num">4</span>
+            <span>Update status (PUBLISHED / FAILED)</span>
+          </li>
+          <li>
+            <span class="badge-worker-num">5</span>
+            <span>Retry on failure</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- ARROW 3 -> 4 -->
+      <div class="flow-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </div>
+
+      <!-- COL 4: KAFKA -->
+      <div class="arch-card card-kafka">
+        <div class="kafka-header">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6741d9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="6" cy="18" r="3"></circle>
+            <circle cx="18" cy="18" r="3"></circle>
+            <circle cx="12" cy="6" r="3"></circle>
+            <path d="M12 9v3m-3.5 3.5L12 12m3.5 3.5L12 12"></path>
+          </svg>
+          <span>Kafka<br/><span style="font-size:10.5px; color:var(--ex-text-muted);">(Event Stream)</span></span>
+        </div>
+
+        <div class="topics-box">
+          <div class="topics-title">Topics</div>
+          <ul class="topics-list">
+            <li>• order-events</li>
+            <li>• shipment-events</li>
+            <li>• payment-events</li>
+            <li>• notification-events</li>
+            <li>• ...</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- ARROW 4 -> 5 -->
+      <div class="flow-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </div>
+
+      <!-- COL 5: CONSUMERS STACK -->
+      <div class="consumers-stack-col">
+        <div class="consumers-stack-header">Consumers</div>
+
+        <!-- Consumer 1 -->
+        <div class="consumer-pill-item" style="border-color:#e03131; background:#fff5f5;">
+          <span style="font-size:16px;">🛒</span>
+          <div class="consumer-text-group">
+            <span class="consumer-main-name" style="color:#c92a2a;">E-commerce API</span>
+            <span class="consumer-sub-action">(update order status, notifications)</span>
+          </div>
+        </div>
+
+        <!-- Consumer 2 -->
+        <div class="consumer-pill-item" style="border-color:#1971c2; background:#e7f5ff;">
+          <span style="font-size:16px;">🚚</span>
+          <div class="consumer-text-group">
+            <span class="consumer-main-name" style="color:#1864ab;">Logistics API</span>
+            <span class="consumer-sub-action">(create shipment, update tracking)</span>
+          </div>
+        </div>
+
+        <!-- Consumer 3 -->
+        <div class="consumer-pill-item" style="border-color:#f59f00; background:#fff9db;">
+          <span style="font-size:16px;">🔔</span>
+          <div class="consumer-text-group">
+            <span class="consumer-main-name" style="color:#d9480f;">Notification Service</span>
+            <span class="consumer-sub-action">(email, SMS, push)</span>
+          </div>
+        </div>
+
+        <!-- Consumer 4 -->
+        <div class="consumer-pill-item" style="border-color:#0c8599; background:#e3fafc;">
+          <span style="font-size:16px;">📊</span>
+          <div class="consumer-text-group">
+            <span class="consumer-main-name" style="color:#0b7285;">Analytics</span>
+            <span class="consumer-sub-action">(reporting & insights)</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MIDDLE STEP-BY-STEP FLOW (6 CARDS CONTAINER) -->
+    <div class="step-flow-container">
+      <div class="step-flow-badge-title">Step-by-Step Flow</div>
+
+      <div class="step-flow-grid">
+
+        <!-- STEP 1: START TRANSACTION -->
+        <div class="flow-step-card f-step-1">
+          <div class="flow-step-top">
+            <span class="num-badge f-badge-1">1</span>
+            <span>Start Transaction</span>
+          </div>
+          <div class="flow-step-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 18 22 12 16 6"></polyline>
+              <polyline points="8 6 2 12 8 18"></polyline>
+            </svg>
+          </div>
+          <div class="flow-step-desc">
+            Business logic starts (e.g. create order, update shipment).
+          </div>
+        </div>
+
+        <!-- ARROW 1 -> 2 -->
+        <div class="flow-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </div>
+
+        <!-- STEP 2: UPDATE DATABASE -->
+        <div class="flow-step-card f-step-2">
+          <div class="flow-step-top">
+            <span class="num-badge f-badge-2">2</span>
+            <span>Update Database</span>
+          </div>
+          <div class="flow-step-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2">
+              <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+              <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+            </svg>
+          </div>
+          <div class="flow-step-desc">
+            Update business data, create tracking logs, insert outbox event.
+          </div>
+        </div>
+
+        <!-- ARROW 2 -> 3 -->
+        <div class="flow-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </div>
+
+        <!-- STEP 3: COMMIT -->
+        <div class="flow-step-card f-step-3">
+          <div class="flow-step-top">
+            <span class="num-badge f-badge-3">3</span>
+            <span>Commit</span>
+          </div>
+          <div class="flow-step-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2b8a3e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
+          <div class="flow-step-desc">
+            All changes (data + outbox) are committed <strong>atomically</strong>.
+          </div>
+        </div>
+
+        <!-- ARROW 3 -> 4 -->
+        <div class="flow-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </div>
+
+        <!-- STEP 4: PUBLISH EVENT -->
+        <div class="flow-step-card f-step-4">
+          <div class="flow-step-top">
+            <span class="num-badge f-badge-4">4</span>
+            <span>Publish Event</span>
+          </div>
+          <div class="flow-step-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6741d9" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="18" r="3"></circle>
+              <circle cx="12" cy="6" r="3"></circle>
+              <path d="M12 9v3m-3.5 3.5L12 12m3.5 3.5L12 12"></path>
+            </svg>
+          </div>
+          <div class="flow-step-desc">
+            Outbox worker reads pending events and publishes to Kafka.
+          </div>
+        </div>
+
+        <!-- ARROW 4 -> 5 -->
+        <div class="flow-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </div>
+
+        <!-- STEP 5: UPDATE STATUS -->
+        <div class="flow-step-card f-step-5">
+          <div class="flow-step-top">
+            <span class="num-badge f-badge-5">5</span>
+            <span>Update Status</span>
+          </div>
+          <div class="flow-step-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d9480f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+          </div>
+          <div class="flow-step-desc">
+            Mark event as <strong>PUBLISHED</strong>. If failed, retry later.
+          </div>
+        </div>
+
+        <!-- ARROW 5 -> 6 -->
+        <div class="flow-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </div>
+
+        <!-- STEP 6: CONSUMERS PROCESS -->
+        <div class="flow-step-card f-step-6">
+          <div class="flow-step-top">
+            <span class="num-badge f-badge-6">6</span>
+            <span>Consumers Process</span>
+          </div>
+          <div class="flow-step-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0c8599" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div class="flow-step-desc">
+            E-commerce, Logistics, Notifications, Analytics consume the event.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- BOTTOM 3 STRATEGIC PANELS -->
+    <div class="bottom-panels-grid">
+
+      <!-- PANEL 1: WHY IT'S IMPORTANT -->
+      <div class="strat-panel panel-why">
+        <div class="strat-panel-header">
+          <span style="font-size:18px;">✅</span>
+          <span>Why It's Important?</span>
+        </div>
+        <ul class="why-bullets">
+          <li>Ensures database and event consistency</li>
+          <li>Prevents lost events</li>
+          <li>Handles Kafka downtime gracefully</li>
+          <li>Provides retry capability</li>
+          <li>Improves system reliability and auditability</li>
+          <li>Supports event-driven architecture</li>
+        </ul>
+      </div>
+
+      <!-- PANEL 2: WHAT HAPPENS IF KAFKA IS DOWN -->
+      <div class="strat-panel panel-kafka-down">
+        <div class="strat-panel-header">
+          <span style="font-size:18px;">❗</span>
+          <span>What Happens If Kafka Is Down?</span>
+        </div>
+        <div class="recovery-flow">
+          <div class="recovery-item">
+            <span>🗄️</span>
+            <span>Event saved in outbox <strong>(PENDING)</strong></span>
+          </div>
+          <div class="recovery-arrow">▼</div>
+          <div class="recovery-item">
+            <span>🔄</span>
+            <span>Outbox worker retries</span>
+          </div>
+          <div class="recovery-arrow">▼</div>
+          <div class="recovery-item">
+            <span>⚡</span>
+            <span>When Kafka is available ➔ event is published</span>
+          </div>
+          <div class="recovery-arrow">▼</div>
+          <div class="recovery-item" style="border-color:#2b8a3e; background:#ebfbee; color:#2b8a3e;">
+            <span>✔</span>
+            <strong>Status updated to PUBLISHED</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 3: IMPORTANT NOTE -->
+      <div class="strat-panel panel-important-note">
+        <div class="strat-panel-header">
+          <span style="font-size:18px;">ℹ️</span>
+          <span>Important Note</span>
+        </div>
+        <div class="note-bold-callout">
+          Transactional Outbox does NOT give exactly-once delivery.
+        </div>
+        <div class="note-explain">
+          For true reliability, combine it with:
+        </div>
+        <div class="combo-formula-card">
+          <div class="formula-row" style="color:var(--c-purple);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="18" r="3"></circle>
+              <circle cx="12" cy="6" r="3"></circle>
+              <path d="M12 9v3m-3.5 3.5L12 12m3.5 3.5L12 12"></path>
+            </svg>
+            <span>At-Least-Once Delivery (Kafka)</span>
+          </div>
+          <div style="font-size:16px; font-weight:900; color:var(--ex-stroke);">+</div>
+          <div class="formula-row" style="color:var(--c-green);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span>Idempotent Consumers</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- FOOTER RIBBON (NAVY BAR) -->
+    <div class="footer-ribbon">
+      <span>🚀 Database Transaction</span>
+      <span>➔</span>
+      <span>Outbox</span>
+      <span>➔</span>
+      <span>Kafka</span>
+      <span>➔</span>
+      <span>Idempotent Consumer</span>
+      <span>=</span>
+      <span style="color:#38bdf8;">Reliable Event-Driven System</span>
+    </div>
+
+    <!-- BRANDING FOOTER WATERMARK -->
+    <div class="branding-footer">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; width:26px; height:26px; background:#1971c2; color:#fff; border-radius:50%; align-items:center; justify-content:center; font-weight:800; font-size:12px; font-family:'Shantell Sans', cursive;">MK</span>
+        <span>Architected by <span class="branding-author" contenteditable="true" title="Click to edit your name if needed">Mrityunjay Kumar</span></span>
+      </div>
+      <div>
+        <span>System Design Series • Transactional Outbox Pattern • PostgreSQL & Apache Kafka</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FLOATING TOAST NOTIFICATION -->
+  <div id="toast" class="toast">Notification</div>
+
+  <script>
+    // Theme Toggle
+    function toggleTheme() {
+      document.body.classList.toggle('dark-mode');
+      const isDark = document.body.classList.contains('dark-mode');
+      document.getElementById('btn-theme').innerText = isDark ? '☀️ Light Mode' : '🌓 Dark Mode';
+      showToast(isDark ? '🌙 Dark Mode Activated' : '☀️ Light Mode Activated');
+    }
+
+    // High-Resolution 2.5x PNG Export
+    function exportExcalidrawPNG() {
+      const card = document.getElementById('capture-card');
+      showToast('📸 Generating 2.5x High-Resolution PNG...');
+
+      html2canvas(card, {
+        scale: 2.5, // Crisp 2.5x resolution for viral clarity on LinkedIn
+        backgroundColor: document.body.classList.contains('dark-mode') ? '#12141a' : '#ffffff',
+        useCORS: true,
+        logging: false
+      }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'Transactional-Outbox-Pattern-Excalidraw.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('✅ Downloaded! Ready to post on LinkedIn.');
+      }).catch(err => {
+        console.error(err);
+        showToast('❌ Export error. Use Win + Shift + S to screenshot.');
+      });
+    }
+
+    // Copy Transactional Outbox LinkedIn Caption
+    function copyLinkedInCaption() {
+      const caption = `🚀 System Design Series: The Transactional Outbox Pattern
+(Solving the Dual-Write Problem in Microservices)
+
+How do you guarantee that a database update and a message broker publish happen ATOMICALLY?
+
+❌ The Anti-Pattern (Dual-Write Hazard):
+\`\`\`typescript
+await db.order.create({ data: orderData });
+// What happens if Kafka is down or network drops here?
+await kafka.publish('order-events', orderData);
+\`\`\`
+If Kafka fails, your database has the order, but downstream services (fulfillment, logistics, notifications) never know it exists! Data is now corrupted.
+
+✅ The Solution: The Transactional Outbox Pattern 📦
+Instead of publishing directly to Kafka in the HTTP request handler:
+1️⃣ Start a local ACID database transaction.
+2️⃣ Update business data (Order, Shipment, Tracking logs).
+3️⃣ Insert an Outbox record into the 'outbox_table' with status PENDING.
+4️⃣ COMMIT both in a SINGLE atomic database transaction. If one fails, everything rolls back. Zero dual-write loss!
+
+5️⃣ An asynchronous Outbox Worker (polling or Debezium CDC) reads pending events and streams them to Apache Kafka.
+6️⃣ Once Kafka acknowledges the message, update the outbox status to PUBLISHED.
+
+❓ What happens if Kafka goes down?
+The outbox events remain safely persisted in PostgreSQL as PENDING. When Kafka recovers, the worker retries and drains the queue with zero lost messages!
+
+⚠️ The Million-Dollar Gotcha:
+"Transactional Outbox does NOT guarantee Exactly-Once delivery — it guarantees At-Least-Once delivery."
+If the worker crashes after publishing to Kafka but before updating PostgreSQL status, it will re-publish the message upon reboot.
+
+💡 The Golden Formula:
+Database Transaction ➔ Outbox ➔ Kafka (At-Least-Once) ➔ Idempotent Consumers = 100% Reliable Event-Driven Architecture!
+
+Architecture figure crafted in hand-drawn Excalidraw style. ✏️
+Full interactive studio & complete codebase on GitHub:
+👉 https://github.com/mrityunjay45108/ecommerce-logistics-system-design
+
+How are you handling the Dual-Write problem in your microservices? Let's discuss in the comments below! 👇
+
+#SystemDesign #Microservices #SoftwareArchitecture #Kafka #PostgreSQL #NodeJS #NestJS #DistributedSystems #BackendEngineering #DevCommunity`;
+
+      navigator.clipboard.writeText(caption).then(() => {
+        showToast('📋 Outbox Pattern Caption copied to clipboard!');
+      }).catch(() => {
+        showToast('Failed to copy. Please copy manually.');
+      });
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.classList.add('show');
+      setTimeout(() => {
+        t.classList.remove('show');
+      }, 3500);
+    }
+  </script>
+</body>
+</html>

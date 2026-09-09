@@ -129,18 +129,21 @@ start index.html
 start day4-excalidraw.html
 start webhook-reliability-excalidraw.html
 start day6-idempotency-excalidraw.html
+start outbox-pattern-excalidraw.html
 
 # macOS
 open index.html
 open day4-excalidraw.html
 open webhook-reliability-excalidraw.html
 open day6-idempotency-excalidraw.html
+open outbox-pattern-excalidraw.html
 
 # Linux
 xdg-open index.html
 xdg-open day4-excalidraw.html
 xdg-open webhook-reliability-excalidraw.html
 xdg-open day6-idempotency-excalidraw.html
+xdg-open outbox-pattern-excalidraw.html
 ```
 
 ---
@@ -194,6 +197,32 @@ An authentic hand-drawn Excalidraw architectural diagram based on real-world mis
 - **The Big Lesson**:
   > "Idempotency is not just a Redis key. Exactly-once behavior is achieved through idempotent processing, not by assuming the network will deliver exactly once."
 - **Interactive Tools**: 🌓 Light/Dark mode, 📸 2.5x Retina PNG Export, and 📋 1-Click LinkedIn Post Caption Copy.
+
+---
+
+## 📦 Excalidraw Edition: Transactional Outbox Pattern (`outbox-pattern-excalidraw.html`)
+An authentic hand-drawn Excalidraw architectural diagram detailing how to eliminate the **Dual-Write Hazard** in distributed microservices:
+- **Core Principle**: *"Ensure database changes and event publishing happen reliably and atomically."*
+- **5-Column Architecture Breakdown**:
+  1. **E-commerce / Logistics Service (NestJS)**: Executes business operations (create order, update shipment).
+  2. **PostgreSQL (Database)**:
+     - **ACID Transaction**: Atomic commit containing domain updates (order, shipment), tracking/audit logs, and outbox event insertion.
+     - **Outbox Table**: Dedicated table (`id`, `aggregate_type`, `aggregate_id`, `event_type`, `payload`, `status (PENDING)`, `created_at`, `retry_count`).
+  3. **Outbox Worker**: Polling or CDC-driven background worker that fetches pending events, streams to Kafka, updates status (`PUBLISHED` / `FAILED`), and handles retries.
+  4. **Kafka (Event Stream)**: Partitioned event topics (`order-events`, `shipment-events`, `payment-events`, `notification-events`).
+  5. **Consumers**: `E-commerce API`, `Logistics API`, `Notification Service`, and `Analytics` processing events with consumer group isolation.
+- **Step-by-Step Flow**:
+  1. `Start Transaction` (Business logic starts)
+  2. `Update Database` (Data + Tracking + Outbox)
+  3. `Commit` (Atomic commit)
+  4. `Publish Event` (Outbox worker streams to Kafka)
+  5. `Update Status` (Marked as `PUBLISHED`, retry on failure)
+  6. `Consumers Process` (Downstream ingestion)
+- **Key Reliability Insights**:
+  - **What Happens If Kafka Is Down?**: Event stays safely saved in PostgreSQL as `PENDING`. When Kafka recovers, the worker retries and drains the queue with zero lost events.
+  - **The Important Gotcha**: Transactional Outbox guarantees **At-Least-Once Delivery**, NOT Exactly-Once.
+  - **The Golden Formula**: `Database Transaction ➔ Outbox ➔ Kafka (At-Least-Once) + Idempotent Consumers = 100% Reliable Event-Driven System`.
+- **Interactive Tools**: 🌓 Light/Dark Mode, 📸 2.5x Retina PNG Export, and 📋 1-Click LinkedIn Caption Copy.
 
 ---
 
