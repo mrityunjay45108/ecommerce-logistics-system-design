@@ -130,6 +130,7 @@ start day4-excalidraw.html
 start webhook-reliability-excalidraw.html
 start day6-idempotency-excalidraw.html
 start outbox-pattern-excalidraw.html
+start day8-saga-pattern-excalidraw.html
 
 # macOS
 open index.html
@@ -137,6 +138,7 @@ open day4-excalidraw.html
 open webhook-reliability-excalidraw.html
 open day6-idempotency-excalidraw.html
 open outbox-pattern-excalidraw.html
+open day8-saga-pattern-excalidraw.html
 
 # Linux
 xdg-open index.html
@@ -144,6 +146,7 @@ xdg-open day4-excalidraw.html
 xdg-open webhook-reliability-excalidraw.html
 xdg-open day6-idempotency-excalidraw.html
 xdg-open outbox-pattern-excalidraw.html
+xdg-open day8-saga-pattern-excalidraw.html
 ```
 
 ---
@@ -222,6 +225,32 @@ An authentic hand-drawn Excalidraw architectural diagram detailing how to elimin
   - **What Happens If Kafka Is Down?**: Event stays safely saved in PostgreSQL as `PENDING`. When Kafka recovers, the worker retries and drains the queue with zero lost events.
   - **The Important Gotcha**: Transactional Outbox guarantees **At-Least-Once Delivery**, NOT Exactly-Once.
   - **The Golden Formula**: `Database Transaction ➔ Outbox ➔ Kafka (At-Least-Once) + Idempotent Consumers = 100% Reliable Event-Driven System`.
+- **Interactive Tools**: 🌓 Light/Dark Mode, 📸 2.5x Retina PNG Export, and 📋 1-Click LinkedIn Caption Copy.
+
+---
+
+## 🔄 Day 8 Excalidraw Edition: Saga Pattern: Managing Distributed Transactions (`day8-saga-pattern-excalidraw.html`)
+An authentic hand-drawn Excalidraw architectural diagram demonstrating how to manage distributed microservices workflows with compensating transactions:
+- **Core Principle**: *"Saga ≠ Global Transaction — It's a series of local transactions with compensation."*
+- **1️⃣ Normal Flow (Happy Path)**:
+  - **Customer & Frontend**: Order placement ➔ API Gateway.
+  - **Sequential Local Transactions**:
+    1. `E-commerce Service`: Creates order locally (DB commit) + publishes `OrderCreated` via Outbox Pattern.
+    2. `Payment Service`: Deducts payment locally (DB commit) + publishes `PaymentSuccess` via Outbox Pattern.
+    3. `Inventory Service`: Reserves items locally (DB commit) + publishes `StockReserved` via Outbox Pattern.
+    4. `Logistics Service`: Creates shipment & generates AWB (DB commit) + publishes `ShipmentCreated` via Outbox Pattern.
+    5. `Notification Service`: Dispatches WhatsApp/SMS customer alerts (DB commit).
+  - **Event Bus & Consumers**: Events streamed asynchronously over Apache Kafka to Analytics, Reporting, Search, and Mobile Apps.
+- **2️⃣ Failure Flow & Compensating Transactions**:
+  - **Failure Event**: Shipment creation fails in Logistics Service (e.g. unserviceable delivery pin code).
+  - **Compensations in Reverse Order**:
+    1. `Inventory Service`: Releases reserved stock (`Compensate`).
+    2. `Payment Service`: Triggers immediate payment refund (`Compensate`).
+    3. `E-commerce Service`: Cancels customer order (`Compensate`).
+- **Strategic Architectural Takeaways**:
+  - **Saga Patterns**: Choreography (Decentralized, event-driven) vs. Orchestration (Central coordinator controlling the state machine).
+  - **Key Technologies**: Apache Kafka, Transactional Outbox, Idempotency, Retry & DLQ, State Machines, Distributed Tracing.
+  - **Quote**: *"Saga Pattern helps coordinate long-running distributed business transactions without requiring one global database transaction."*
 - **Interactive Tools**: 🌓 Light/Dark Mode, 📸 2.5x Retina PNG Export, and 📋 1-Click LinkedIn Caption Copy.
 
 ---
