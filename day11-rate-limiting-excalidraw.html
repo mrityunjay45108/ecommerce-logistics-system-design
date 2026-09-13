@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Day 11/30: Rate Limiting & Throttling (Excalidraw Style) | LinkedIn Architecture</title>
+  <!-- Google Fonts: Excalidraw Hand-drawn typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Fira+Code:wght@500;600;700&family=Kalam:wght@400;700&family=Patrick+Hand&family=Shantell+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <!-- html2canvas for High-Res PNG export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --ex-bg: #ffffff;
+      --ex-grid: rgba(0, 0, 0, 0.04);
+      --ex-text: #1e1e1e;
+      --ex-text-muted: #495057;
+      --ex-stroke: #1e1e1e;
+      
+      --c-blue: #1971c2;
+      --c-blue-bg: #e7f5ff;
+      --c-blue-border: #1864ab;
+      
+      --c-green: #2b8a3e;
+      --c-green-bg: #ebfbee;
+      --c-green-border: #237032;
+      
+      --c-purple: #6741d9;
+      --c-purple-bg: #f3f0ff;
+      --c-purple-border: #5f3dc4;
+      
+      --c-orange: #d9480f;
+      --c-orange-bg: #fff4e6;
+      --c-orange-border: #c93b05;
+
+      --c-amber: #f59f00;
+      --c-amber-bg: #fff9db;
+      --c-amber-border: #f08c00;
+      
+      --c-cyan: #0c8599;
+      --c-cyan-bg: #e3fafc;
+      --c-cyan-border: #0b7285;
+      
+      --c-pink: #c2255c;
+      --c-pink-bg: #fff0f6;
+      --c-pink-border: #a61e4d;
+
+      --c-red: #e03131;
+      --c-red-bg: #fff5f5;
+      --c-red-border: #c92a2a;
+
+      --c-navy: #0b1f3a;
+      --c-navy-bg: #e8f0fe;
+    }
+
+    body.dark-mode {
+      --ex-bg: #10141e;
+      --ex-grid: rgba(255, 255, 255, 0.05);
+      --ex-text: #f8f9fa;
+      --ex-text-muted: #ced4da;
+      --ex-stroke: #e9ecef;
+      
+      --c-blue: #4dabf7;
+      --c-blue-bg: rgba(25, 113, 194, 0.22);
+      --c-blue-border: #74c0fc;
+      
+      --c-green: #51cf66;
+      --c-green-bg: rgba(43, 138, 62, 0.22);
+      --c-green-border: #69db7c;
+      
+      --c-purple: #9775fa;
+      --c-purple-bg: rgba(103, 65, 217, 0.22);
+      --c-purple-border: #b197fc;
+      
+      --c-orange: #ff922b;
+      --c-orange-bg: rgba(217, 72, 15, 0.22);
+      --c-orange-border: #ffa94d;
+
+      --c-amber: #ffd43b;
+      --c-amber-bg: rgba(245, 159, 0, 0.22);
+      --c-amber-border: #ffe066;
+      
+      --c-cyan: #3bc9db;
+      --c-cyan-bg: rgba(12, 133, 153, 0.22);
+      --c-cyan-border: #66d9e8;
+      
+      --c-pink: #f783ac;
+      --c-pink-bg: rgba(194, 37, 92, 0.22);
+      --c-pink-border: #faa2c1;
+
+      --c-red: #ff8787;
+      --c-red-bg: rgba(224, 49, 49, 0.22);
+      --c-red-border: #ff6b6b;
+
+      --c-navy: #74c0fc;
+      --c-navy-bg: rgba(11, 31, 58, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #d8dee4;
+      color: var(--ex-text);
+      font-family: 'Patrick Hand', 'Kalam', 'Caveat', cursive, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    /* TOP ACTION TOOLBAR */
+    .toolbar-bar {
+      width: 100%;
+      max-width: 1360px;
+      background: #ffffff;
+      border: 2px solid #1e1e1e;
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 10px 20px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 3px 3px 0px #1e1e1e;
+    }
+
+    body.dark-mode .toolbar-bar {
+      background: #1e1e1e;
+      border-color: #e9ecef;
+      box-shadow: 3px 3px 0px #e9ecef;
+      color: #fff;
+    }
+
+    .toolbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 700;
+    }
+
+    .badge-series {
+      background: #1971c2;
+      color: #fff;
+      font-size: 13px;
+      padding: 3px 12px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+      font-family: 'Shantell Sans', cursive;
+      font-weight: 700;
+    }
+
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn-action {
+      background: #ffffff;
+      border: 1.8px solid #1e1e1e;
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 6px 13px;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 14px;
+      font-weight: 700;
+      color: #1e1e1e;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 2px 2px 0px #1e1e1e;
+      transition: all 0.15s ease;
+    }
+
+    body.dark-mode .btn-action {
+      background: #2b2d35;
+      color: #f8f9fa;
+      border-color: #ced4da;
+      box-shadow: 2px 2px 0px #ced4da;
+    }
+
+    .btn-action:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0px var(--ex-stroke);
+    }
+
+    .btn-action:active {
+      transform: translate(1px, 1px);
+      box-shadow: 1px 1px 0px var(--ex-stroke);
+    }
+
+    .btn-primary {
+      background: #1971c2;
+      color: #ffffff;
+      border-color: #1864ab;
+      box-shadow: 2px 2px 0px #0b1f3a;
+    }
+
+    body.dark-mode .btn-primary {
+      background: #1971c2;
+      color: #ffffff;
+      border-color: #4dabf7;
+    }
+
+    /* CAPTURE CANVAS TARGET */
+    #capture-card {
+      width: 100%;
+      max-width: 1360px;
+      background-color: var(--ex-bg);
+      background-image: 
+        radial-gradient(var(--ex-grid) 1.5px, transparent 1.5px),
+        radial-gradient(var(--ex-grid) 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+      background-position: 0 0, 12px 12px;
+      border: 3px solid var(--ex-stroke);
+      border-radius: 255px 25px 225px 25px/25px 225px 25px 255px;
+      box-shadow: 8px 8px 0px var(--ex-stroke);
+      padding: 26px 30px 22px 30px;
+      position: relative;
+    }
+
+    /* HEADER ROW */
+    .header-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 6px;
+      margin-bottom: 22px;
+      background: #08162b;
+      color: #ffffff;
+      border: 2.5px solid var(--ex-stroke);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 16px 22px;
+      box-shadow: 4px 4px 0px var(--ex-stroke);
+      position: relative;
+    }
+
+    body.dark-mode .header-row {
+      background: #0a111f;
+    }
+
+    .header-title-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .day-badge-top {
+      display: inline-block;
+      background: #1971c2;
+      color: #ffffff;
+      font-family: 'Shantell Sans', cursive;
+      font-weight: 800;
+      font-size: 15px;
+      padding: 4px 16px;
+      border-radius: 12px;
+      border: 1.8px solid #ffffff;
+      box-shadow: 2px 2px 0px var(--ex-stroke);
+    }
+
+    .header-divider {
+      font-size: 24px;
+      font-weight: 300;
+      color: #475569;
+    }
+
+    .main-title {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 32px;
+      font-weight: 800;
+      line-height: 1.15;
+      color: #ffffff;
+      letter-spacing: -0.5px;
+    }
+
+    .main-title span.title-cyan {
+      color: #38bdf8;
+    }
+
+    .main-subtitle {
+      font-family: 'Patrick Hand', cursive;
+      font-size: 18px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    /* GENERAL SECTION CONTAINER */
+    .diagram-section-box {
+      border: 2px solid var(--ex-stroke);
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      box-shadow: 3px 3px 0px var(--ex-stroke);
+      background: #ffffff;
+      position: relative;
+    }
+
+    body.dark-mode .diagram-section-box {
+      background: #151824;
+    }
+
+    .section-label-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Shantell Sans', cursive;
+      font-size: 15px;
+      font-weight: 800;
+      margin-bottom: 14px;
+    }
+
+    /* TOP ARCHITECTURE DIAGRAM */
+    .arch-flow-grid {
+      display: grid;
+      grid-template-columns: 1.1fr auto 1.25fr auto 1.25fr auto 1.4fr auto 1.45fr auto 1.1fr;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .flow-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ex-stroke);
+    }
+
+    .flow-arrow svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .arch-node {
+      border: 1.8px solid var(--ex-stroke);
+      border-radius: 255px 12px 225px 12px/12px 225px 12px 255px;
+      padding: 12px 10px;
+      background: #ffffff;
+      min-height: 105px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      box-shadow: 2px 2px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .arch-node {
+      background: #1b1f2b;
+    }
+
+    .node-icon {
+      font-size: 22px;
+      margin-bottom: 4px;
+    }
+
+    .node-title {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 12.5px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .node-sub {
+      font-size: 10px;
+      color: var(--ex-text-muted);
+      margin-top: 2px;
+    }
+
+    /* SPECIFIC NODES */
+    .node-client { border-color: var(--c-blue-border); background: var(--c-blue-bg); }
+    .node-client .node-title { color: var(--c-blue); }
+
+    .node-lb { border-color: var(--c-purple-border); background: var(--c-purple-bg); }
+    .node-lb .node-title { color: var(--c-purple); }
+
+    .node-gw { border-color: var(--c-cyan-border); background: var(--c-cyan-bg); }
+    .node-gw .node-title { color: var(--c-cyan); }
+
+    /* RATE LIMITER DECISION NODE */
+    .rate-limiter-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      position: relative;
+    }
+
+    .node-limiter {
+      border: 2px solid var(--c-green-border);
+      background: var(--c-green-bg);
+      padding: 10px 14px;
+      border-radius: 255px 12px 225px 12px/12px 225px 12px 255px;
+      box-shadow: 2px 2px 0px var(--ex-stroke);
+      text-align: center;
+      width: 100%;
+    }
+    .node-limiter .node-title { color: var(--c-green); }
+
+    .redis-pill-down {
+      border: 1.5px dashed var(--c-blue-border);
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 5px 8px;
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 1.5px 1.5px 0px var(--ex-stroke);
+      text-align: left;
+      line-height: 1.2;
+    }
+
+    body.dark-mode .redis-pill-down {
+      background: #141a26;
+    }
+
+    /* BRANCH LABELS */
+    .decision-branch-group {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .branch-allowed-row {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: var(--c-green);
+    }
+
+    .badge-allowed {
+      background: var(--c-green);
+      color: #fff;
+      font-family: 'Shantell Sans', cursive;
+      font-size: 9.5px;
+      font-weight: 800;
+      padding: 1px 6px;
+      border-radius: 6px;
+    }
+
+    .branch-exceeded-row {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: var(--c-red);
+    }
+
+    .rejected-429-box {
+      border: 2px solid var(--c-red-border);
+      background: var(--c-red-bg);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--c-red);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 2px 2px 0px var(--ex-stroke);
+    }
+
+    /* MICROSERVICES GROUP */
+    .microservices-container {
+      border: 1.8px dashed var(--c-blue-border);
+      border-radius: 12px;
+      padding: 8px 10px;
+      background: rgba(25, 113, 194, 0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    body.dark-mode .microservices-container {
+      background: rgba(25, 113, 194, 0.08);
+    }
+
+    .microservices-label {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: var(--c-blue);
+      text-align: center;
+    }
+
+    .ms-item-pill {
+      border: 1.2px solid var(--ex-stroke);
+      border-radius: 6px;
+      padding: 4px 8px;
+      background: #ffffff;
+      font-size: 10.5px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 1px 1px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .ms-item-pill {
+      background: #171b26;
+    }
+
+    /* DATABASE & REDIS COLUMN */
+    .storage-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .storage-card {
+      border: 1.5px solid var(--ex-stroke);
+      border-radius: 8px;
+      padding: 6px 8px;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10.5px;
+      font-weight: 700;
+      box-shadow: 1.5px 1.5px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .storage-card {
+      background: #191e2b;
+    }
+
+    /* MIDDLE 3-PANEL ROW */
+    .middle-panels-grid {
+      display: grid;
+      grid-template-columns: 1.7fr 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    /* TOKEN BUCKET ALGORITHM CARD */
+    .panel-token-bucket {
+      border-color: var(--c-blue-border);
+      background: #f8fbff;
+    }
+
+    body.dark-mode .panel-token-bucket {
+      background: #131926;
+    }
+
+    .token-bucket-inner {
+      display: grid;
+      grid-template-columns: 1.1fr 1.2fr 1fr;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* BUCKET VISUAL */
+    .bucket-visual-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .bucket-rate-note {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: var(--c-blue);
+      margin-bottom: 4px;
+    }
+
+    .bucket-container-svg {
+      width: 105px;
+      height: 90px;
+    }
+
+    .bucket-capacity-note {
+      font-size: 10px;
+      font-weight: 800;
+      color: var(--ex-text);
+      margin-top: 4px;
+      border: 1.2px solid var(--ex-stroke);
+      background: #ffffff;
+      border-radius: 6px;
+      padding: 2px 6px;
+      box-shadow: 1px 1px 0px var(--ex-stroke);
+    }
+
+    body.dark-mode .bucket-capacity-note {
+      background: #1e2433;
+    }
+
+    /* BUCKET STEPS */
+    .bucket-steps-list {
+      list-style: none;
+      font-size: 11px;
+      line-height: 1.35;
+      font-weight: 700;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .bucket-step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .step-circle-num {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--c-blue);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    /* BUCKET EXAMPLE BOX */
+    .bucket-example-card {
+      border: 1.5px dashed var(--c-blue-border);
+      border-radius: 10px;
+      background: #ffffff;
+      padding: 8px 10px;
+      box-shadow: 1.5px 1.5px 0px var(--ex-stroke);
+      font-size: 10.5px;
+      line-height: 1.35;
+    }
+
+    body.dark-mode .bucket-example-card {
+      background: #182030;
+    }
+
+    .example-tag {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--c-blue);
+      margin-bottom: 4px;
+    }
+
+    /* RATE LIMIT DIMENSIONS */
+    .dimensions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .dim-pill {
+      border: 1.5px solid var(--c-cyan-border);
+      border-radius: 8px;
+      background: var(--c-cyan-bg);
+      padding: 8px 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      font-weight: 800;
+      color: var(--c-cyan);
+      box-shadow: 1.5px 1.5px 0px var(--ex-stroke);
+    }
+
+    /* E-COMMERCE EXAMPLE CARD */
+    .ecom-example-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .ecom-row-card {
+      border: 1.5px solid var(--ex-stroke);
+      border-radius: 8px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 11px;
+      box-shadow: 1.5px 1.5px 0px var(--ex-stroke);
+      background: #ffffff;
+    }
+
+    body.dark-mode .ecom-row-card {
+      background: #171c28;
+    }
+
+    .ecom-target {
+      font-family: 'Shantell Sans', cursive;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .ecom-limit-val {
+      font-family: 'Fira Code', monospace;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    /* BOTTOM 3-PANEL ROW */
+    .bottom-panels-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.6fr 1fr;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    /* RATE LIMITING VS THROTTLING */
+    .vs-dual-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .vs-box {
+      border-radius: 8px;
+      padding: 8px 8px;
+      font-size: 10.5px;
+      line-height: 1.35;
+      font-weight: 600;
+      border: 1.5px solid var(--ex-stroke);
+      box-shadow: 1.5px 1.5px 0px var(--ex-stroke);
+    }
+
+    .vs-box-rl {
+      border-color: var(--c-green-border);
+      background: var(--c-green-bg);
+    }
+    .vs-box-rl .vs-title { color: var(--c-green); }
+
+    .vs-box-th {
+      border-color: var(--c-blue-border);
+      background: var(--c-blue-bg);
+    }
+    .vs-box-th .vs-title { color: var(--c-blue); }
+
+    .vs-title {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 11.5px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    /* OTHER RESILIENCE PATTERNS */
+    .resilience-row-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+
+    .resilience-card {
+      border: 1.5px solid var(--ex-stroke);
+      border-radius: 8px;
+      padding: 8px 4px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 1.5px 1.5px 0px var(--ex-stroke);
+      background: #ffffff;
+    }
+
+    body.dark-mode .resilience-card {
+      background: #171c28;
+    }
+
+    .res-icon {
+      font-size: 18px;
+      margin-bottom: 2px;
+    }
+
+    .res-name {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 10.5px;
+      font-weight: 800;
+      margin-bottom: 2px;
+    }
+
+    .res-desc {
+      font-size: 9px;
+      line-height: 1.2;
+      color: var(--ex-text-muted);
+    }
+
+    /* WHERE TO APPLY CHECKLIST */
+    .checklist-items {
+      list-style: none;
+      font-size: 11px;
+      line-height: 1.35;
+      font-weight: 700;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 3px;
+    }
+
+    .checklist-items li {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* FOOTER RIBBON (NAVY BAR) */
+    .footer-ribbon {
+      background: #08162b;
+      color: #ffffff;
+      border: 2.2px solid var(--ex-stroke);
+      border-radius: 255px 12px 225px 12px/12px 225px 12px 255px;
+      padding: 12px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 3px 3px 0px var(--ex-stroke);
+      flex-wrap: wrap;
+    }
+
+    .ribbon-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Shantell Sans', cursive;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .ribbon-quote {
+      font-family: 'Shantell Sans', cursive;
+      font-size: 15px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .ribbon-quote span.quote-green {
+      color: #51cf66;
+    }
+
+    .ribbon-day-badge {
+      background: #1971c2;
+      color: #fff;
+      font-family: 'Shantell Sans', cursive;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 3px 12px;
+      border-radius: 10px;
+      border: 1.2px solid #ffffff;
+    }
+
+    /* BRANDING FOOTER */
+    .branding-footer {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1.5px dashed var(--ex-stroke);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: var(--ex-text-muted);
+    }
+
+    .branding-author {
+      font-weight: 700;
+      color: var(--ex-text);
+      cursor: text;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px dashed transparent;
+    }
+
+    .branding-author:hover {
+      border-color: #1971c2;
+      background: rgba(25, 113, 194, 0.08);
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #1e1e1e;
+      color: #fff;
+      font-family: 'Patrick Hand', cursive;
+      font-size: 15px;
+      padding: 10px 18px;
+      border-radius: 8px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.25s ease;
+      z-index: 1000;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    @media (max-width: 1180px) {
+      .arch-flow-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .flow-arrow {
+        transform: rotate(90deg);
+        padding: 4px 0;
+      }
+      .middle-panels-grid, .bottom-panels-grid {
+        grid-template-columns: 1fr;
+      }
+      .resilience-row-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOP ACTION TOOLBAR -->
+  <div class="toolbar-bar">
+    <div class="toolbar-left">
+      <span>⚡ Excalidraw System Studio</span>
+      <span class="badge-series">Day 11 / 30</span>
+    </div>
+
+    <div class="toolbar-right">
+      <a href="day8-saga-pattern-excalidraw.html" class="btn-action" style="text-decoration:none;">
+        🔄 Day 8 Saga
+      </a>
+      <a href="outbox-pattern-excalidraw.html" class="btn-action" style="text-decoration:none;">
+        📦 Outbox Pattern
+      </a>
+      <a href="day6-idempotency-excalidraw.html" class="btn-action" style="text-decoration:none;">
+        🔑 Day 6 Idempotency
+      </a>
+      <a href="webhook-reliability-excalidraw.html" class="btn-action" style="text-decoration:none;">
+        ⚡ Day 5 Webhook
+      </a>
+      <a href="day4-excalidraw.html" class="btn-action" style="text-decoration:none;">
+        📦 Day 4 Logistics
+      </a>
+      <a href="index.html" class="btn-action" style="text-decoration:none;">
+        🏢 Full Studio
+      </a>
+      <button class="btn-action" onclick="toggleTheme()" id="btn-theme">
+        🌓 Dark / Light
+      </button>
+      <button class="btn-action" onclick="copyLinkedInCaption()">
+        📋 Copy LinkedIn Caption
+      </button>
+      <button class="btn-action btn-primary" onclick="exportExcalidrawPNG()">
+        📸 Download PNG (2.5x Retina)
+      </button>
+    </div>
+  </div>
+
+  <!-- CAPTURE CANVAS TARGET -->
+  <div id="capture-card">
+
+    <!-- HEADER ROW -->
+    <div class="header-row">
+      <div class="header-title-wrap">
+        <span class="day-badge-top">DAY 11 / 30</span>
+        <span class="header-divider">|</span>
+        <h1 class="main-title">RATE LIMITING <span class="title-cyan">&amp; THROTTLING</span></h1>
+      </div>
+      <div class="main-subtitle">
+        Protect APIs from overload, abuse &amp; traffic spikes
+      </div>
+    </div>
+
+    <!-- 1. ARCHITECTURE DIAGRAM SECTION -->
+    <div class="diagram-section-box">
+      <div class="section-label-top">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1971c2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="5" r="3"></circle>
+          <circle cx="6" cy="12" r="3"></circle>
+          <circle cx="18" cy="19" r="3"></circle>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+          <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+        </svg>
+        <span>Architecture Diagram</span>
+      </div>
+
+      <div class="arch-flow-grid">
+
+        <!-- 1. CLIENT -->
+        <div class="arch-node node-client">
+          <div class="node-icon">👥</div>
+          <div class="node-title">Client</div>
+          <div class="node-sub">(Web / Mobile App)</div>
+        </div>
+
+        <!-- ARROW -->
+        <div class="flow-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </div>
+
+        <!-- 2. LOAD BALANCER -->
+        <div class="arch-node node-lb">
+          <div class="node-icon">⚖️</div>
+          <div class="node-title">Load Balancer</div>
+          <div class="node-sub">(Distributes traffic)</div>
+        </div>
+
+        <!-- ARROW -->
+        <div class="flow-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </div>
+
+        <!-- 3. API GATEWAY -->
+        <div class="arch-node node-gw">
+          <div class="node-icon">🚪</div>
+          <div class="node-title">API Gateway</div>
+          <div class="node-sub">(Single entry point)</div>
+        </div>
+
+        <!-- ARROW -->
+        <div class="flow-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </div>
+
+        <!-- 4. RATE LIMITER + REDIS -->
+        <div class="rate-limiter-wrapper">
+          <div class="node-limiter">
+            <div style="font-size:20px;">🛡️</div>
+            <div class="node-title">Rate Limiter</div>
+            <div class="node-sub" style="font-weight:700;">(Token Bucket)</div>
+          </div>
+
+          <!-- REDIS SHARED STATE -->
+          <div class="redis-pill-down">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#e03131" stroke="#c92a2a" stroke-width="1.5">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+            </svg>
+            <div>
+              <div style="color:#c92a2a; font-weight:800;">Redis</div>
+              <div style="font-size:8.5px; color:var(--ex-text-muted);">(Shared Rate-Limit State)<br/>(Distributed Systems)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. BRANCHING: ALLOWED VS REJECTED -->
+        <div class="decision-branch-group">
+          <!-- TOP: WITHIN LIMIT (ALLOWED) -->
+          <div class="branch-allowed-row">
+            <span>Within Limit</span>
+            <span class="badge-allowed">ALLOWED ➔</span>
+          </div>
+
+          <!-- BOTTOM: LIMIT EXCEEDED (429) -->
+          <div class="branch-exceeded-row">
+            <span>Limit Exceeded ➔</span>
+            <div class="rejected-429-box">
+              <span style="font-size:14px;">❗</span>
+              <div>
+                <div>429 Too Many Requests</div>
+                <div style="font-size:8.5px; font-weight:600;">(Request Rejected)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. MICROSERVICES -->
+        <div class="microservices-container">
+          <div class="microservices-label">Microservices</div>
+          <div class="ms-item-pill" style="color:#1971c2;">
+            <span>👤</span>
+            <span>Auth Service</span>
+          </div>
+          <div class="ms-item-pill" style="color:#2b8a3e;">
+            <span>🛒</span>
+            <span>Order Service</span>
+          </div>
+          <div class="ms-item-pill" style="color:#6741d9;">
+            <span>💳</span>
+            <span>Payment Service</span>
+          </div>
+        </div>
+
+        <!-- ARROW -->
+        <div class="flow-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+            <polyline points="12 5 19 12 12 19"></polyline>
+          </svg>
+        </div>
+
+        <!-- 7. STORAGE LAYER -->
+        <div class="storage-col">
+          <div class="storage-card" style="border-color:#1971c2;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#1971c2" stroke="#1864ab" stroke-width="1.5">
+              <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+              <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+            </svg>
+            <div>
+              <div style="font-weight:800; color:#1864ab;">Database</div>
+              <div style="font-size:9px; color:var(--ex-text-muted);">(PostgreSQL / MySQL)</div>
+            </div>
+          </div>
+
+          <div class="storage-card" style="border-color:#e03131;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#e03131" stroke="#c92a2a" stroke-width="1.5">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+            </svg>
+            <div>
+              <div style="font-weight:800; color:#c92a2a;">Redis</div>
+              <div style="font-size:9px; color:var(--ex-text-muted);">(Cache / Shared State)</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 2. MIDDLE ROW (3 PANELS: TOKEN BUCKET, DIMENSIONS, E-COMMERCE EXAMPLE) -->
+    <div class="middle-panels-grid">
+
+      <!-- PANEL 1: TOKEN BUCKET ALGORITHM -->
+      <div class="diagram-section-box panel-token-bucket">
+        <div class="section-label-top" style="color:#1971c2;">
+          <span style="font-size:18px;">🪣</span>
+          <span>Token Bucket Algorithm</span>
+        </div>
+
+        <div class="token-bucket-inner">
+          <!-- BUCKET ILLUSTRATION -->
+          <div class="bucket-visual-col">
+            <div class="bucket-rate-note">Tokens added<br/>at a fixed rate</div>
+            <!-- SVG HAND-DRAWN BUCKET -->
+            <svg class="bucket-container-svg" viewBox="0 0 120 100">
+              <!-- Dropping Tokens -->
+              <circle cx="60" cy="8" r="4" fill="#38bdf8" stroke="#1e1e1e" stroke-width="1.5" />
+              <circle cx="50" cy="18" r="3.5" fill="#38bdf8" stroke="#1e1e1e" stroke-width="1.5" />
+              <circle cx="72" cy="16" r="3.5" fill="#38bdf8" stroke="#1e1e1e" stroke-width="1.5" />
+              <!-- Bucket Outline -->
+              <path d="M25 32 L35 90 Q60 98 85 90 L95 32 Z" fill="#0284c7" stroke="#1e1e1e" stroke-width="2.5" opacity="0.85" />
+              <ellipse cx="60" cy="32" rx="35" ry="8" fill="#38bdf8" stroke="#1e1e1e" stroke-width="2" />
+              <!-- Floating Tokens in Bucket -->
+              <circle cx="52" cy="55" r="7" fill="#bae6fd" stroke="#0369a1" stroke-width="1.5" />
+              <circle cx="70" cy="58" r="7" fill="#bae6fd" stroke="#0369a1" stroke-width="1.5" />
+              <circle cx="60" cy="72" r="7" fill="#bae6fd" stroke="#0369a1" stroke-width="1.5" />
+              <circle cx="44" cy="74" r="6" fill="#bae6fd" stroke="#0369a1" stroke-width="1.5" />
+              <circle cx="76" cy="74" r="6" fill="#bae6fd" stroke="#0369a1" stroke-width="1.5" />
+            </svg>
+            <div class="bucket-capacity-note">
+              Bucket Capacity<br/>= Burst Limit
+            </div>
+          </div>
+
+          <!-- STEPS -->
+          <ul class="bucket-steps-list">
+            <li class="bucket-step-item">
+              <span class="step-circle-num">1</span>
+              <span><strong>Refill tokens</strong><br/>(at fixed rate)</span>
+            </li>
+            <li class="bucket-step-item">
+              <span class="step-circle-num">2</span>
+              <span><strong>Each request</strong><br/>consumes 1 token</span>
+            </li>
+            <li class="bucket-step-item">
+              <span class="step-circle-num">3</span>
+              <span>If token available ➔<br/><strong style="color:#2b8a3e;">Allow request ✔</strong></span>
+            </li>
+            <li class="bucket-step-item">
+              <span class="step-circle-num">4</span>
+              <span>If no token ➔<br/><strong style="color:#c92a2a;">Throttle / 429 ❌</strong></span>
+            </li>
+          </ul>
+
+          <!-- EXAMPLE BOX -->
+          <div class="bucket-example-card">
+            <div class="example-tag">Example</div>
+            <div style="margin-bottom:6px;">
+              <strong>Rate</strong> : 5 tokens/sec<br/>
+              <span style="font-size:9.5px; color:var(--ex-text-muted);">(refill rate)</span>
+            </div>
+            <div style="margin-bottom:6px;">
+              <strong>Burst</strong> : 20 tokens<br/>
+              <span style="font-size:9.5px; color:var(--ex-text-muted);">(bucket capacity)</span>
+            </div>
+            <div style="border-top:1px dashed #cbd5e1; padding-top:4px; font-weight:800; color:#1971c2;">
+              🔘 1 request = 1 token
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 2: RATE LIMIT DIMENSIONS -->
+      <div class="diagram-section-box">
+        <div class="section-label-top" style="color:#0c8599;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>Rate Limit Dimensions</span>
+        </div>
+
+        <div class="dimensions-grid">
+          <div class="dim-pill">
+            <span>📍</span>
+            <span>Per IP</span>
+          </div>
+          <div class="dim-pill">
+            <span>👤</span>
+            <span>Per User</span>
+          </div>
+          <div class="dim-pill">
+            <span>🔑</span>
+            <span>API Key</span>
+          </div>
+          <div class="dim-pill">
+            <span>🏢</span>
+            <span>Tenant</span>
+          </div>
+          <div class="dim-pill" style="grid-column: span 2; justify-content: center;">
+            <span>&lt;/&gt;</span>
+            <span>Route / API</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PANEL 3: E-COMMERCE EXAMPLE -->
+      <div class="diagram-section-box">
+        <div class="section-label-top" style="color:#6741d9;">
+          <span style="font-size:18px;">🛒</span>
+          <span>E-commerce Example</span>
+        </div>
+
+        <div class="ecom-example-list">
+          <!-- 1. LOGIN API -->
+          <div class="ecom-row-card" style="border-color:#1971c2;">
+            <div class="ecom-target" style="color:#1864ab;">
+              <span>👤</span>
+              <span>Login API</span>
+            </div>
+            <div class="ecom-limit-val" style="color:#1971c2;">5 requests / min / IP</div>
+          </div>
+
+          <!-- 2. ORDERS API -->
+          <div class="ecom-row-card" style="border-color:#2b8a3e;">
+            <div class="ecom-target" style="color:#237032;">
+              <span>📦</span>
+              <span>Orders API</span>
+            </div>
+            <div class="ecom-limit-val" style="color:#2b8a3e;">20 requests / min / user</div>
+          </div>
+
+          <!-- 3. PAYMENT API -->
+          <div class="ecom-row-card" style="border-color:#c2255c; background:#fff5f7;">
+            <div class="ecom-target" style="color:#a61e4d;">
+              <span>💳</span>
+              <span>Payment API</span>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:10px; font-weight:800; color:#c2255c;">Stricter limit</div>
+              <div class="ecom-limit-val" style="font-size:8.5px; color:var(--ex-text-muted);">(e.g., 2 requests / min / user)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 3. BOTTOM ROW (RATE LIMITING VS THROTTLING, RESILIENCE PATTERNS, WHERE TO APPLY) -->
+    <div class="bottom-panels-grid">
+
+      <!-- CARD 1: RATE LIMITING VS THROTTLING -->
+      <div class="diagram-section-box">
+        <div class="section-label-top" style="color:#1971c2;">
+          <span style="font-size:18px;">⚖️</span>
+          <span>Rate Limiting vs Throttling</span>
+        </div>
+
+        <div class="vs-dual-container">
+          <div class="vs-box vs-box-rl">
+            <div class="vs-title">Rate Limiting</div>
+            <div>✔ Controls how many requests are allowed.</div>
+            <div>✔ Defines the limit.</div>
+            <div style="margin-top:4px; font-weight:800;">✔ e.g., 100 requests/min</div>
+          </div>
+
+          <div class="vs-box vs-box-th">
+            <div class="vs-title">Throttling</div>
+            <div>✔ Slows down or rejects excess traffic.</div>
+            <div>✔ Enforces the limit.</div>
+            <div style="margin-top:4px; font-weight:800;">✔ e.g., 429 Too Many Requests</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: OTHER RESILIENCE PATTERNS -->
+      <div class="diagram-section-box">
+        <div class="section-label-top" style="color:#2b8a3e;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>Other Resilience Patterns</span>
+        </div>
+
+        <div class="resilience-row-grid">
+          <!-- 1. RETRY -->
+          <div class="resilience-card" style="border-color:#6741d9;">
+            <div class="res-icon" style="color:#6741d9;">🔄</div>
+            <div class="res-name" style="color:#6741d9;">Retry</div>
+            <div class="res-desc">Try the failed request again.</div>
+          </div>
+
+          <!-- 2. TIMEOUT -->
+          <div class="resilience-card" style="border-color:#f59f00;">
+            <div class="res-icon" style="color:#f59f00;">⏰</div>
+            <div class="res-name" style="color:#f08c00;">Timeout</div>
+            <div class="res-desc">Stop waiting after a duration.</div>
+          </div>
+
+          <!-- 3. CIRCUIT BREAKER -->
+          <div class="resilience-card" style="border-color:#e03131;">
+            <div class="res-icon" style="color:#e03131;">🚫</div>
+            <div class="res-name" style="color:#c92a2a;">Circuit Breaker</div>
+            <div class="res-desc">Stop unhealthy dependency calls.</div>
+          </div>
+
+          <!-- 4. BULKHEAD -->
+          <div class="resilience-card" style="border-color:#0c8599;">
+            <div class="res-icon" style="color:#0c8599;">🥞</div>
+            <div class="res-name" style="color:#0b7285;">Bulkhead</div>
+            <div class="res-desc">Isolate resources between workloads.</div>
+          </div>
+
+          <!-- 5. RATE LIMITING -->
+          <div class="resilience-card" style="border-color:#2b8a3e;">
+            <div class="res-icon" style="color:#2b8a3e;">⏲️</div>
+            <div class="res-name" style="color:#237032;">Rate Limiting</div>
+            <div class="res-desc">Control traffic entering the system.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3: WHERE TO APPLY? -->
+      <div class="diagram-section-box">
+        <div class="section-label-top" style="color:#c2255c;">
+          <span style="font-size:18px;">🎯</span>
+          <span>Where to Apply?</span>
+        </div>
+
+        <ul class="checklist-items">
+          <li><span style="color:#2b8a3e;">✔</span> <span>API Gateway</span></li>
+          <li><span style="color:#2b8a3e;">✔</span> <span>Authentication endpoints</span></li>
+          <li><span style="color:#2b8a3e;">✔</span> <span>Payment APIs</span></li>
+          <li><span style="color:#2b8a3e;">✔</span> <span>Order APIs</span></li>
+          <li><span style="color:#2b8a3e;">✔</span> <span>Public APIs</span></li>
+          <li><span style="color:#2b8a3e;">✔</span> <span>AI / LLM APIs</span></li>
+          <li><span style="color:#2b8a3e;">✔</span> <span>Microservices &amp; Multi-tenant systems</span></li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- FOOTER RIBBON (NAVY BAR) -->
+    <div class="footer-ribbon">
+      <div class="ribbon-left">
+        <span style="font-size:20px;">💡</span>
+        <span>Key Takeaway:</span>
+      </div>
+
+      <div class="ribbon-quote">
+        &ldquo;<span class="quote-green">Control traffic</span> before traffic controls your system.&rdquo;
+      </div>
+
+      <div class="ribbon-day-badge">
+        📅 Day 11/30
+      </div>
+    </div>
+
+    <!-- BRANDING FOOTER -->
+    <div class="branding-footer">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="display:inline-flex; width:26px; height:26px; background:#1971c2; color:#fff; border-radius:50%; align-items:center; justify-content:center; font-weight:800; font-size:12px; font-family:'Shantell Sans', cursive;">MK</span>
+        <span>Architected by <span class="branding-author" contenteditable="true" title="Click to edit your name if needed">Mrityunjay Kumar</span></span>
+      </div>
+      <div>
+        <span>System Design Series • Day 11/30 • Rate Limiting &amp; Throttling • Token Bucket Algorithm</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FLOATING TOAST NOTIFICATION -->
+  <div id="toast" class="toast">Notification</div>
+
+  <script>
+    // Theme Toggle
+    function toggleTheme() {
+      document.body.classList.toggle('dark-mode');
+      const isDark = document.body.classList.contains('dark-mode');
+      document.getElementById('btn-theme').innerText = isDark ? '☀️ Light Mode' : '🌓 Dark Mode';
+      showToast(isDark ? '🌙 Dark Mode Activated' : '☀️ Light Mode Activated');
+    }
+
+    // High-Resolution 2.5x PNG Export
+    function exportExcalidrawPNG() {
+      const card = document.getElementById('capture-card');
+      showToast('📸 Generating 2.5x High-Resolution PNG...');
+
+      html2canvas(card, {
+        scale: 2.5, // Crisp 2.5x resolution for viral clarity on LinkedIn
+        backgroundColor: document.body.classList.contains('dark-mode') ? '#10141e' : '#ffffff',
+        useCORS: true,
+        logging: false
+      }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'Day11-Rate-Limiting-Throttling-Excalidraw.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        showToast('✅ Downloaded! Ready to post on LinkedIn.');
+      }).catch(err => {
+        console.error(err);
+        showToast('❌ Export error. Use Win + Shift + S to screenshot.');
+      });
+    }
+
+    // Copy Day 11 LinkedIn Caption
+    function copyLinkedInCaption() {
+      const caption = `🚀 System Design Series | Day 11: Rate Limiting & Throttling
+(Protect APIs from Overload, Abuse & Sudden Traffic Spikes)
+
+"Control traffic before traffic controls your system." 🚦
+
+What happens when a flash sale goes live, a script kiddie launches a brute-force credential stuffing attack, or an external microservice starts an infinite retry storm?
+
+Without rate limiting, your database crashes, memory leaks explode, and your entire infrastructure collapses.
+
+Here is the production-grade architecture to build resilient, self-protecting APIs:
+
+1️⃣ The Token Bucket Algorithm 🪣:
+The gold standard algorithm used by Stripe, AWS, and Cloudflare:
+• Tokens are added to the bucket at a constant refill rate (e.g. 5 tokens/sec).
+• The bucket has a maximum capacity (e.g. 20 tokens) which defines your BURST LIMIT.
+• Each incoming request consumes 1 token.
+• If tokens exist ➔ Request is ALLOWED through!
+• If bucket is empty ➔ Immediate HTTP 429 Too Many Requests response!
+
+2️⃣ Distributed Rate Limiting with Redis ⚡:
+In multi-node architectures, memory-based limiters fail because clients hit different servers.
+We maintain the rate-limit state globally in Redis using atomic Lua scripts or Sliding-Window Logs, ensuring microsecond response times and zero race conditions.
+
+3️⃣ Rate Limiting Dimensions 🎯:
+Don't just limit by IP! Smart backends configure limits across multiple dimensions:
+• Per IP: Defense against DDoS & unauthenticated bot scrapers.
+• Per User / JWT: Fair usage for logged-in accounts.
+• Per API Key: Enforcing tier plans (Free vs Pro).
+• Per Tenant: Multi-tenant SaaS protection.
+• Per Route:
+  - Login API: 5 requests / min / IP (Brute-force protection)
+  - Orders API: 20 requests / min / user
+  - Payment API: Strict 2 requests / min / user (Prevents double billing)
+
+4️⃣ Rate Limiting vs. Throttling:
+• Rate Limiting: Defines the policy (e.g., maximum 100 req/min).
+• Throttling: Enforces the policy (shaping traffic, queuing, or dropping excess requests with HTTP 429).
+
+5️⃣ The 5 Pillars of Distributed Resilience:
+1. Rate Limiting (Controls traffic entering the system)
+2. Retries with Exponential Backoff & Jitter
+3. Timeouts (Never wait forever for a slow network)
+4. Circuit Breakers (Fail fast when downstream dependencies degrade)
+5. Bulkheads (Isolate thread pools & resources to prevent cascading failure)
+
+Architecture diagram crafted in hand-drawn Excalidraw style. ✏️
+Full interactive studio & complete microservices codebase on GitHub:
+👉 https://github.com/mrityunjay45108/ecommerce-logistics-system-design
+
+How do you implement rate limiting in your tech stack (Redis, Envoy, Cloudflare, or Kong)? Let's discuss below! 👇
+
+#SystemDesign #RateLimiting #Microservices #Redis #API #BackendEngineering #SoftwareArchitecture #DevCommunity #NodeJS #Security`;
+
+      navigator.clipboard.writeText(caption).then(() => {
+        showToast('📋 Day 11 Caption copied to clipboard!');
+      }).catch(() => {
+        showToast('Failed to copy. Please copy manually.');
+      });
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.classList.add('show');
+      setTimeout(() => {
+        t.classList.remove('show');
+      }, 3500);
+    }
+  </script>
+</body>
+</html>

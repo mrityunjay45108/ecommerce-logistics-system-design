@@ -131,6 +131,7 @@ start webhook-reliability-excalidraw.html
 start day6-idempotency-excalidraw.html
 start outbox-pattern-excalidraw.html
 start day8-saga-pattern-excalidraw.html
+start day11-rate-limiting-excalidraw.html
 
 # macOS
 open index.html
@@ -139,6 +140,7 @@ open webhook-reliability-excalidraw.html
 open day6-idempotency-excalidraw.html
 open outbox-pattern-excalidraw.html
 open day8-saga-pattern-excalidraw.html
+open day11-rate-limiting-excalidraw.html
 
 # Linux
 xdg-open index.html
@@ -147,6 +149,7 @@ xdg-open webhook-reliability-excalidraw.html
 xdg-open day6-idempotency-excalidraw.html
 xdg-open outbox-pattern-excalidraw.html
 xdg-open day8-saga-pattern-excalidraw.html
+xdg-open day11-rate-limiting-excalidraw.html
 ```
 
 ---
@@ -251,6 +254,38 @@ An authentic hand-drawn Excalidraw architectural diagram demonstrating how to ma
   - **Saga Patterns**: Choreography (Decentralized, event-driven) vs. Orchestration (Central coordinator controlling the state machine).
   - **Key Technologies**: Apache Kafka, Transactional Outbox, Idempotency, Retry & DLQ, State Machines, Distributed Tracing.
   - **Quote**: *"Saga Pattern helps coordinate long-running distributed business transactions without requiring one global database transaction."*
+- **Interactive Tools**: 🌓 Light/Dark Mode, 📸 2.5x Retina PNG Export, and 📋 1-Click LinkedIn Caption Copy.
+
+---
+
+## 🚦 Day 11 Excalidraw Edition: Rate Limiting & Throttling (`day11-rate-limiting-excalidraw.html`)
+An authentic hand-drawn Excalidraw architectural diagram demonstrating how to safeguard production APIs from denial-of-service, abuse, and sudden traffic spikes:
+- **Core Principle**: *"Control traffic before traffic controls your system."*
+- **Architecture Pipeline**:
+  - `Client (Web/Mobile App)` ➔ `Load Balancer` ➔ `API Gateway` ➔ `Rate Limiter (Token Bucket)`
+  - **Shared State with Redis**: Centralized distributed lock & counter store preventing synchronization drift across gateway replicas.
+  - **Branching Decision**:
+    - **Within Limit (ALLOWED)**: Routes to microservices (`Auth`, `Order`, `Payment`) ➔ persistent storage (`PostgreSQL`, `Redis Cache`).
+    - **Limit Exceeded (REJECTED)**: Immediate rejection with standard **`HTTP 429 Too Many Requests`**.
+- **The Token Bucket Algorithm Explained**:
+  - Tokens are continuously refilled into the bucket at a configured refill rate.
+  - Bucket capacity defines the **Burst Limit**.
+  - Each incoming request consumes 1 token. If tokens remain, the request is allowed; if empty, it is throttled.
+- **Multi-Dimensional Rate Limiting**:
+  - By `IP` (DDoS & bot scraper mitigation)
+  - By `User ID / JWT` (fair usage quotas)
+  - By `API Key` (pricing tiers & SLA enforcement)
+  - By `Tenant` (SaaS noisy-neighbor protection)
+  - By `Route / API` (e.g. strict 5 req/min on `/auth/login`, 20 req/min on `/orders`, and 2 req/min on `/payments`).
+- **Rate Limiting vs. Throttling**:
+  - *Rate Limiting* specifies the boundary policies (e.g. 100 req/min).
+  - *Throttling* enforces execution behavior (shaping, delaying, or shedding load via 429).
+- **The 5 Resilience Pillars**:
+  1. `Retry` (with exponential backoff and jitter)
+  2. `Timeout` (preventing thread exhaustion)
+  3. `Circuit Breaker` (fail-fast on downstream failures)
+  4. `Bulkhead` (resource pool isolation)
+  5. `Rate Limiting` (traffic ingress control)
 - **Interactive Tools**: 🌓 Light/Dark Mode, 📸 2.5x Retina PNG Export, and 📋 1-Click LinkedIn Caption Copy.
 
 ---
