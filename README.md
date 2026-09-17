@@ -132,6 +132,7 @@ start day6-idempotency-excalidraw.html
 start outbox-pattern-excalidraw.html
 start day8-saga-pattern-excalidraw.html
 start day11-rate-limiting-excalidraw.html
+start day12-distributed-rate-limiting-excalidraw.html
 
 # macOS
 open index.html
@@ -141,6 +142,7 @@ open day6-idempotency-excalidraw.html
 open outbox-pattern-excalidraw.html
 open day8-saga-pattern-excalidraw.html
 open day11-rate-limiting-excalidraw.html
+open day12-distributed-rate-limiting-excalidraw.html
 
 # Linux
 xdg-open index.html
@@ -150,6 +152,7 @@ xdg-open day6-idempotency-excalidraw.html
 xdg-open outbox-pattern-excalidraw.html
 xdg-open day8-saga-pattern-excalidraw.html
 xdg-open day11-rate-limiting-excalidraw.html
+xdg-open day12-distributed-rate-limiting-excalidraw.html
 ```
 
 ---
@@ -286,6 +289,62 @@ An authentic hand-drawn Excalidraw architectural diagram demonstrating how to sa
   3. `Circuit Breaker` (fail-fast on downstream failures)
   4. `Bulkhead` (resource pool isolation)
   5. `Rate Limiting` (traffic ingress control)
+- **Interactive Tools**: 🌓 Light/Dark Mode, 📸 2.5x Retina PNG Export, and 📋 1-Click LinkedIn Caption Copy.
+
+---
+
+## ⚡ Day 12 Excalidraw Edition: Distributed Rate Limiting with Redis (`day12-distributed-rate-limiting-excalidraw.html`)
+An authentic hand-drawn Excalidraw architectural diagram demonstrating how to enforce unified rate limits across multi-instance microservices without loopholes or race conditions:
+- **Core Principle**: *"Same limit. All instances. No loopholes."*
+- **The In-Memory Problem**:
+  - In a cluster with 3 API instances and an intended limit of `100 req/min`, independent in-memory counters permit `100 + 100 + 100 = 300 req/min` — tripling unintended load on databases.
+  - Instance crashes or auto-scaling resets counts, allowing burst exploits.
+- **The Redis Distributed Solution**:
+  - Centralized in-memory data store acting as single source of truth for rate counter state.
+  - Sub-millisecond latency operations via atomic commands.
+- **Architecture Pipeline**:
+  - `Client (Web/Mobile App)` ➔ `Load Balancer` ➔ `API Gateway (Ingress & Auth)` ➔ Replicas (`API Server 1`, `API Server 2`, `API Server 3`)
+  - **Shared State with Redis**: All server instances query a shared Redis cluster (`Single source of truth for rate counter state`).
+  - **Branching Decision**:
+    - **Within Limit (ALLOWED)**: Routes to backend microservices (`Auth`, `Order`, `Payment`) ➔ persistent storage (`PostgreSQL`, etc.).
+    - **Limit Exceeded (DENIED)**: Immediate rejection with standard **`HTTP 429 Too Many Requests`**.
+- **The Token Bucket Algorithm**:
+  - Tokens are continuously added at a fixed refill rate up to maximum bucket capacity.
+  - Allows smooth handling of short legitimate traffic bursts while strictly clamping sustained throughput.
+- **Atomicity with Redis Lua Scripting**:
+  - Eliminates the fatal Check-Then-Act race condition (`GET` ➔ check ➔ `INCR` + `EXPIRE`).
+  - Redis executes Lua scripts as a single atomic transaction without client round-trip latency:
+    ```lua
+    local current = redis.call('get', KEYS[1])
+    if current and tonumber(current) >= tonumber(ARGV[1]) then
+        return 0 -- Denied
+    else
+        redis.call('incr', KEYS[1])
+        if not current then
+            redis.call('expire', KEYS[1], ARGV[2])
+        end
+        return 1 -- Allowed
+    end
+    ```
+- **Multi-Dimensional Rate Limiting**:
+  - **By IP Address**: Mitigates DDoS and unauthenticated brute-force attacks.
+  - **By User ID (JWT)**: Ensures fair resource sharing among logged-in users.
+  - **By API Key / Tier**: Enforces SLA tiers (e.g., Free vs. Enterprise).
+  - **By Critical Route**: Tight quotas on costly endpoints (`POST /orders/checkout`, `POST /auth/login`).
+- **Standard HTTP 429 Response Headers**:
+  - `X-RateLimit-Limit`: Maximum allowed requests per time window (e.g., `100`).
+  - `X-RateLimit-Remaining`: Remaining request quota in current window (e.g., `42`).
+  - `X-RateLimit-Reset`: UTC epoch timestamp when current window resets (e.g., `1711929600`).
+  - `Retry-After`: Seconds client must wait before retrying when throttled (e.g., `18`).
+- **Algorithm Comparison Table**:
+  - `Token Bucket`: Burst friendly, memory efficient, high accuracy.
+  - `Leaky Bucket`: Smooth outflow rate, queues excess requests.
+  - `Fixed Window`: Ultra-low memory, but susceptible to 2x boundary bursts.
+  - `Sliding Window Log`: Perfectly accurate, but high Redis memory footprint.
+  - `Sliding Window Counter`: Optimal balance of precision and low memory.
+- **Resilience & Fallback Strategies**:
+  - Fail-Open vs. Fail-Closed policy selection during Redis connectivity degradation.
+  - Redis Sentinel / Cluster replication for 99.999% high availability.
 - **Interactive Tools**: 🌓 Light/Dark Mode, 📸 2.5x Retina PNG Export, and 📋 1-Click LinkedIn Caption Copy.
 
 ---
